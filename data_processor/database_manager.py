@@ -13,6 +13,22 @@ class DatabaseManager:
 		else:
 			print('Successfully load database, found stocks number',self.num_stocks)
 		
+		# TODO: develop a database manager that can get data by date, month, year 
+	
+	def getDataByDate(date):
+		pass
+
+	def getAllDaysByMonth(date):
+		pass
+
+	def getLastDayCloseValue(date):
+		pass
+
+	def getFirstDayOpenValue(date):
+		pass
+
+	def getPriviousDaysClosedValue(date, days):
+		pass
 
 	def getAllStocksId(self):
 		return self.files
