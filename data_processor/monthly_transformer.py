@@ -33,19 +33,21 @@ def isSameDate(date1, date2):
 			return False
 	return True
 
-def getAMRs(month_date, monthly_database, num_month):
+def getAMRs(month_date, monthly_database, num_month, month_id = -1):
 
 	current_month_id = -1
-	
-	for id, data in enumerate(monthly_database):
-		if isSameMonth(month_date, data[0]):
-			current_month_id = id
-			break
+	if month_id < -1:
+		for id, data in enumerate(monthly_database):
+			if isSameMonth(month_date, data[0]):
+				current_month_id = id
+				break
 
-	if current_month_id == -1:
-		print("Can't find this month in database, check if you are passing the right database")
+		if current_month_id == -1:
+			print("Can't find this month in database, check if you are passing the right database")
+	else:
+		current_month_id = month_id
 
-	start_month_id = id - num_month
+	start_month_id = current_month_id - num_month
 	if start_month_id < 0:
 		return None
 
@@ -82,26 +84,46 @@ def getADRs(day, daily_database, num_day):
 		adr.append( calAR(start_price, eval_price))
 	return adr
 
+def getNextMR(month_date, monthly_database, month_id = -1):
+	if month_id < 0:
+		for id, data in enumerate(monthly_database):
+			if isSameMonth(month_date, data[0]):
+				current_month_id = id
+				break
+	else:
+		current_month_id = month_id
+
+	if current_month_id == len(monthly_database)-1:
+		return None
+
+	next_month_id = current_month_id + 1
+	next_month_return = monthly_database[next_month_id][2]
+	return [next_month_return]
+
 def calAR(start_price, close_price):
 	return (close_price - start_price)/start_price
 
 def getInputData(daily_database, monthly_database):
 	input_datas = []
-	for month_data in monthly_database:
+	for month_id, month_data in enumerate(monthly_database):
+		date = month_data[0]
 		# calculate AMRs
-		amr = getAMRs(month_data[0], monthly_database, 12)
+		amr = getAMRs(date, monthly_database, 12, month_id)
 		if amr is None:
 			continue
 		# calculate ADRs
-		adr = getADRs(month_data[0], daily_database, 20)
+		adr = getADRs(date, daily_database, 20)
 		if adr is None:
 			continue
 		# calculate Jan flag
-		if month_data[0][1]==1:
+		if date[1]==1:
 			jan = [1]
 		else:
 			jan = [0]
-		input_data = amr + adr + jan
+		nmr = getNextMR(date, monthly_database)
+		if nmr is None:
+			continue
+		input_data = amr + adr + jan + nmr
 		input_datas.append(input_data)
 	return input_datas
 
@@ -142,6 +164,9 @@ def main(DATA_ADDRESS):
 		[daily_database, monthly_database] = parseDataBase(file_path)
 		input_data = getInputData(daily_database, monthly_database)
 		print("Found Input Data has dimention",len(input_data),len(input_data[0]))
+
+	plt.plot(input_data[0])
+	plt.show()
 
 if __name__ == '__main__':
 	DATA_ADDRESS = "../data/"
