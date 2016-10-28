@@ -15,6 +15,7 @@ class StockData:
 		self.found_data = False
 		self.x_ids = 0
 		self.y_ids = 0
+		self.train_size = 0
 
 	def getData(self, file_path):
 		file_path = os.path.abspath(file_path)
@@ -50,6 +51,7 @@ class StockData:
 		print("Get %d tranning data, get %d testing data"%(len(self.train_data),len(self.test_data)))
 		random.shuffle(self.train_data)
 		self.train_data = numpy.array(self.train_data)
+		self.train_size = self.train_data.shape[0]
 		self.x_ids = [x for x in range(self.train_data.shape[1]-1)] 
 		self.y_ids = self.train_data.shape[1]-1
 		self.found_data = True
@@ -60,11 +62,16 @@ class StockData:
 			end_id = start_id + num
 			self.current_id = end_id
 			return self.train_data[start_id:end_id,self.x_ids], self.train_data[start_id:end_id,self.y_ids]
+		else:
+			print("Can't find the data, You need to Read Data First! use readDataSet()")
+
+	def getTestData(self, num):
+		return self.test_data[:,self.x_ids], self.test_data[:,self.y_ids]
 
 if __name__ == '__main__':
 	# usecase example
 	data_dir = "../pdata/"
 	database = StockData()
 	database.readDataSet(data_dir)
-	train_batch, label_batch = database.nextBatch(100)
-	print(train_batch.shape, label_batch.shape)
+	for i in range(100):
+		train_batch, label_batch = database.nextBatch(100)
