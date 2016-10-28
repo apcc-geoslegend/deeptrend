@@ -190,9 +190,9 @@ def main():
 	data_address = os.path.abspath(DATA_ADDRESS)
 	data_files = os.listdir(data_address)
 
-	if not os.path.exists(write_address):
-		os.remove(WRITE_ADRESS)
-		os.makedirs(WRITE_ADRESS)
+	if os.path.exists(write_address):
+		os.remove(write_address)
+	os.makedirs(write_address)
 
 	for file in data_files:
 		file_path = os.path.join(data_address, file)
