@@ -14,6 +14,9 @@ def getData(file_path):
 		return data_array
 
 def getAllData(data_dir):
+	# first axis is depth which is each stock
+	# second axis is row which is each month
+	# third axis is col which is every input
 	data_dir = os.path.abspath(data_dir)
 	data_files = os.listdir(data_dir)
 	all_datas = []
@@ -23,6 +26,7 @@ def getAllData(data_dir):
 		all_datas.append(new_data)
 	all_datas = numpy.array(all_datas)
 	print("Get all datas, database has shape:", all_datas.shape)
+	return all_datas
 
 if __name__ == '__main__':
 	data_dir = "../fake_data/"

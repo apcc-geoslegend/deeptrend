@@ -7,10 +7,10 @@ import os.path
 import shutil
 import warnings
 import numpy
-import collections
 import copy
 import matplotlib.pyplot as plt
 import random
+import ult_data
 
 def parseDate(str):
 	if len(str)!=8:
@@ -42,28 +42,29 @@ def isSameDate(date1, date2):
 def getAMRs(month_date, monthly_database, num_month, month_id = -1):
 
 	current_month_id = -1
-	if month_id < -1:
+	if month_id < 0:
 		for id, data in enumerate(monthly_database):
 			if isSameMonth(month_date, data[0]):
 				current_month_id = id
 				break
-
 		if current_month_id == -1:
 			print("Can't find this month in database, check if you are passing the right database")
 	else:
 		current_month_id = month_id
 
-	start_month_id = current_month_id - num_month
-	if start_month_id < 0:
+	start_month_id = current_month_id - num_month # start month is the month you track back
+	base_month_id = start_month_id - 1 # base month id is the last month before we start month
+	if base_month_id < 0:
+		# if we don't have enough month data to trace back return None
 		return None
 
-	start_price = monthly_database[start_month_id][1] # 1 is the closed value in month database
+	base_price = monthly_database[base_month_id][1] # 1 is the closed value in month database
 	# print("Current month", month_date)
 	amr = []
 	for x in range(num_month):
 		eval_month_id = start_month_id + x
 		eval_price = monthly_database[eval_month_id][1]
-		amr.append(calAR(start_price, eval_price))
+		amr.append(calAR(base_price, eval_price))
 		# print(monthly_database[eval_month_id][0])
 	return amr
 
@@ -79,15 +80,16 @@ def getADRs(day, daily_database, num_day):
 		return None
 
 	start_day_id = current_day_id - num_day
-	if start_day_id < 0:
+	base_day_id = start_day_id - 1
+	if base_day_id < 0:
 		return None
 
-	start_price = daily_database[start_day_id][2] # 2 is the closed value
+	base_price = daily_database[base_day_id][2] # 2 is the closed value
 	adr = []
 	for x in range(num_day):
 		eval_day_id = start_day_id + x
 		eval_price = daily_database[eval_day_id][2]
-		adr.append( calAR(start_price, eval_price))
+		adr.append( calAR(base_price, eval_price))
 	return adr
 
 def getNextMR(month_date, monthly_database, month_id = -1):
@@ -189,33 +191,49 @@ def generateFakeData(input_data):
 
 def main():
 	use_fakedata = True
-	WRITE_ADRESS = "../pdata/" # Stands for processed data
-	DATA_ADDRESS = "../data/"
-	write_address = os.path.abspath(WRITE_ADRESS)
-	data_address = os.path.abspath(DATA_ADDRESS)
+	normalize = True
+	write_address = os.path.abspath("../pdata/")  # pdata Stands for processed data
+	data_address = os.path.abspath("../data/")
 	data_files = os.listdir(data_address)
 
 	if os.path.exists(write_address):
 		shutil.rmtree(write_address)
 	os.makedirs(write_address)
 
-	for file in data_files:
-		file_path = os.path.join(data_address, file)
-		[daily_database, monthly_database] = parseDataBase(file_path)
-		input_data = getInputData(daily_database, monthly_database)
-		print("Found Input Data has dimention",len(input_data),len(input_data[0]))
-		write_path = os.path.join(write_address, file)
-		writeInputData(write_path, input_data)
-
+	all_datas = []
 	if use_fakedata:
+		# use first data file as sample data
+		sample_data_path = os.path.join(data_address, data_files[0])
+		[daily_database, monthly_database] = parseDataBase(sample_data_path)
+		sample_data = getInputData(daily_database, monthly_database)
+		# generate 100 fake data
 		for x in range(100):
-			fake_data = generateFakeData(input_data)
-			file_name = "%04d.txt"%x
-			file_path = os.path.join(write_address, file_name)
-			print(file_path)
-			writeInputData(file_path, fake_data)
+			fake_data = generateFakeData(sample_data)
+			all_datas.append(fake_data)
+		print("Generated %d Fake Data has size"%len(fake_data))
+	else:
+		for file in data_files:
+			file_path = os.path.join(data_address, file)
+			[daily_database, monthly_database] = parseDataBase(file_path)
+			input_data = getInputData(daily_database, monthly_database)
+			all_datas.append(input_data)
+
+	if normalize:
+		# first axis is depth which is each stock
+		# second axis is row which is each month
+		# third axis is col which is every input
+		all_datas = numpy.array(all_datas, dtype = numpy.float64)
+		for col in range(all_datas.shape[2] - 2):
+			mu = numpy.mean(all_datas[:,:,col])
+			sigma = numpy.std(all_datas[:,:,col])
+			all_datas[:,:,col] = (all_datas[:,:,col] - mu)/sigma
+
+	print("Found Input Data has dimention",len(all_datas))
+	for id in range(len(all_datas)):
+		file_name = "%d.csv"%id
+		write_path = os.path.join(write_address, file_name)
+		write_data = all_datas[id,:,:]
+		writeInputData(write_path, all_datas[id,:,:])
 
 if __name__ == '__main__':
 	main()
-
-	# testParseDate()
