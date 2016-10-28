@@ -1,8 +1,10 @@
 import csv
 import os.path
 import numpy
+import copy
 
 def getData(file_path):
+	file_path = os.path.abspath(file_path)
 	with open(file_path, 'rt') as csvfile:
 		reader = csv.reader(csvfile, delimiter=',', skipinitialspace=True)
 		data = []
@@ -11,7 +13,17 @@ def getData(file_path):
 		data_array = numpy.array(data)
 		return data_array
 
-# if __name__ == '__main__':
-# 	file_path = "../fake_data/0000.txt"
-# 	file_path = os.path.abspath(file_path)
-# 	
+def getAllData(data_dir):
+	data_dir = os.path.abspath(data_dir)
+	data_files = os.listdir(data_dir)
+	all_datas = []
+	for file in data_files:
+		file_path = os.path.join(data_dir, file)
+		new_data = getData(file_path)
+		all_datas.append(new_data)
+	all_datas = numpy.array(all_datas)
+	print("Get all datas, database has shape:", all_datas.shape)
+
+if __name__ == '__main__':
+	data_dir = "../fake_data/"
+	all_datas = getAllData(data_dir)

@@ -1,5 +1,10 @@
+# this monthly transformer will transform what ever data file in ../data/
+# into ../fake_data/ as csv file with the specific designed input which can be directly
+# feed into neural network
+
 import csv
 import os.path
+import shutil
 import warnings
 import numpy
 import collections
@@ -165,7 +170,6 @@ def parseDataBase(file_path):
 def writeInputData(file_path, input_data):
 	with open(file_path, 'wt') as csvfile:
 		writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_NONE)
-		# writer.writerow(['Date'])
 		for data in input_data:
 			writer.writerow(["% .4f"%x for x in data])
 
@@ -184,14 +188,15 @@ def generateFakeData(input_data):
 	return fake_array.tolist()
 
 def main():
-	WRITE_ADRESS = "../fake_data/"
+	use_fakedata = True
+	WRITE_ADRESS = "../pdata/" # Stands for processed data
 	DATA_ADDRESS = "../data/"
 	write_address = os.path.abspath(WRITE_ADRESS)
 	data_address = os.path.abspath(DATA_ADDRESS)
 	data_files = os.listdir(data_address)
 
 	if os.path.exists(write_address):
-		os.remove(write_address)
+		shutil.rmtree(write_address)
 	os.makedirs(write_address)
 
 	for file in data_files:
@@ -202,12 +207,13 @@ def main():
 		write_path = os.path.join(write_address, file)
 		writeInputData(write_path, input_data)
 
-	for x in range(100):
-		fake_data = generateFakeData(input_data)
-		file_name = "%04d.txt"%x
-		file_path = os.path.join(write_address, file_name)
-		print(file_path)
-		writeInputData(file_path, fake_data)
+	if use_fakedata:
+		for x in range(100):
+			fake_data = generateFakeData(input_data)
+			file_name = "%04d.txt"%x
+			file_path = os.path.join(write_address, file_name)
+			print(file_path)
+			writeInputData(file_path, fake_data)
 
 if __name__ == '__main__':
 	main()
