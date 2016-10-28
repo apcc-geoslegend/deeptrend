@@ -10,7 +10,6 @@ import numpy
 import copy
 import matplotlib.pyplot as plt
 import random
-import ult_data
 
 def parseDate(str):
 	if len(str)!=8:
@@ -224,6 +223,7 @@ def main():
 		# third axis is col which is every input
 		all_datas = numpy.array(all_datas, dtype = numpy.float64)
 		for col in range(all_datas.shape[2] - 2):
+			# z-score implementation
 			mu = numpy.mean(all_datas[:,:,col])
 			sigma = numpy.std(all_datas[:,:,col])
 			all_datas[:,:,col] = (all_datas[:,:,col] - mu)/sigma

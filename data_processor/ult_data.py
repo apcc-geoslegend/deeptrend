@@ -13,7 +13,9 @@ def getData(file_path):
 		data_array = numpy.array(data)
 		return data_array
 
-def getAllData(data_dir):
+def readAllData(data_dir):
+	# read all data input a numpy array
+
 	# first axis is depth which is each stock
 	# second axis is row which is each month
 	# third axis is col which is every input
@@ -30,4 +32,4 @@ def getAllData(data_dir):
 
 if __name__ == '__main__':
 	data_dir = "../fake_data/"
-	all_datas = getAllData(data_dir)
+	all_datas = readAllData(data_dir)
