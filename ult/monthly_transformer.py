@@ -226,8 +226,8 @@ def main():
 		all_datas = numpy.array(all_datas, dtype = numpy.float64)
 		size = all_datas.shape[2]
 		for col in range(size):
-			# if col == size - 2:
-			# 	continue
+			if col == size - 2:
+				continue
 			if zscore:
 				# z-score implementation
 				mu = numpy.mean(all_datas[:,:,col])
