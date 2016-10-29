@@ -16,6 +16,7 @@ class StockData:
 		self.x_ids = []
 		self.y_ids = []
 		self.train_size = 0
+		self.test_precentage = 0
 
 	def getInputSize(self):
 		if self.found_data == True:
@@ -49,7 +50,7 @@ class StockData:
 
 	def readDataSet(self, data_dir, test_precentage = 0.1):
 		# read all data input a numpy array
-
+		self.test_precentage = test_precentage
 		# first axis is depth which is each stock
 		# second axis is row which is each month
 		# third axis is col which is every input
@@ -60,7 +61,7 @@ class StockData:
 			file_path = os.path.join(data_dir, file)
 			new_data = self.getData(file_path)
 			total_length = len(new_data)
-			test_length = int(total_length * 0.1)
+			test_length = int(total_length * test_precentage)
 			# from 0 to (total - test) is trainning data
 			for id in range(0, total_length - test_length):
 				self.train_data.append(new_data[id])

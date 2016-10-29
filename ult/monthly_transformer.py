@@ -191,6 +191,8 @@ def generateFakeData(input_data):
 def main():
 	use_fakedata = True
 	normalize = True
+	zscore = False
+	classification = False
 	write_address = os.path.abspath("../pdata/")  # pdata Stands for processed data
 	data_address = os.path.abspath("../data/")
 	data_files = os.listdir(data_address)
@@ -222,12 +224,25 @@ def main():
 		# second axis is row which is each month
 		# third axis is col which is every input
 		all_datas = numpy.array(all_datas, dtype = numpy.float64)
-		for col in range(all_datas.shape[2] - 2):
-			# z-score implementation
-			mu = numpy.mean(all_datas[:,:,col])
-			sigma = numpy.std(all_datas[:,:,col])
-			all_datas[:,:,col] = (all_datas[:,:,col] - mu)/sigma
+		size = all_datas.shape[2]
+		for col in range(size):
+			# if col == size - 2:
+			# 	continue
+			if zscore:
+				# z-score implementation
+				mu = numpy.mean(all_datas[:,:,col])
+				sigma = numpy.std(all_datas[:,:,col])
+				all_datas[:,:,col] = (all_datas[:,:,col] - mu)/sigma
+			else:
+				# normalize by the maximum
+				minimum = numpy.amin(all_datas[:,:,col])
+				all_datas[:,:,col] = (all_datas[:,:,col]-minimum)
+				maximum = numpy.amax(all_datas[:,:,col])
+				all_datas[:,:,col] = all_datas[:,:,col]/maximum
+		# if classification:
 
+
+	# write the data into the write folder
 	print("Found Input Data has dimention",len(all_datas))
 	for id in range(len(all_datas)):
 		file_name = "%d.csv"%id
