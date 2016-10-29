@@ -13,9 +13,29 @@ class StockData:
 		self.test_data = []
 		self.current_id = 0
 		self.found_data = False
-		self.x_ids = 0
-		self.y_ids = 0
+		self.x_ids = []
+		self.y_ids = []
 		self.train_size = 0
+
+	def getInputSize(self):
+		if self.found_data == True:
+			return len(self.x_ids)
+	
+	def getOutputSize(self):
+		if self.found_data == True:
+			if type(self.y_ids) == type(int(0)):
+				return 1
+			else:
+				return len(self.y_ids)
+
+	def getTrainDataSize(self):
+		if self.found_data == True:
+			return self.train_data.shape[0]
+
+	def getTestDataSize(self):
+		if self.found_data == True:
+			return self.test_data.shape[0]
+
 
 	def getData(self, file_path):
 		file_path = os.path.abspath(file_path)
@@ -51,21 +71,25 @@ class StockData:
 		print("Get %d tranning data, get %d testing data"%(len(self.train_data),len(self.test_data)))
 		random.shuffle(self.train_data)
 		self.train_data = numpy.array(self.train_data)
+		self.test_data = numpy.array(self.test_data)
 		self.train_size = self.train_data.shape[0]
-		self.x_ids = [x for x in range(self.train_data.shape[1]-1)] 
-		self.y_ids = self.train_data.shape[1]-1
+		self.x_ids = [x for x in range(self.train_data.shape[1]-1)]
+		self.y_ids = [int(self.train_data.shape[1]-1)]
 		self.found_data = True
 
 	def nextBatch(self, num):
 		if self.found_data == True:
 			start_id = self.current_id
 			end_id = start_id + num
+			if end_id >= self.train_size:
+				start_id = start_id - self.train_size
+				end_id = end_id - self.train_size
 			self.current_id = end_id
-			return self.train_data[start_id:end_id,self.x_ids], self.train_data[start_id:end_id,self.y_ids]
+			return self.train_data[start_id:end_id, self.x_ids], self.train_data[start_id:end_id, self.y_ids]
 		else:
 			print("Can't find the data, You need to Read Data First! use readDataSet()")
 
-	def getTestData(self, num):
+	def getTestData(self):
 		return self.test_data[:,self.x_ids], self.test_data[:,self.y_ids]
 
 if __name__ == '__main__':
@@ -73,5 +97,8 @@ if __name__ == '__main__':
 	data_dir = "../pdata/"
 	database = StockData()
 	database.readDataSet(data_dir)
-	for i in range(100):
+	for i in range(1000):
 		train_batch, label_batch = database.nextBatch(100)
+	test_data, test_lable = database.getTestData()
+	print(test_lable)
+
