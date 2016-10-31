@@ -192,7 +192,7 @@ def main():
 	use_fakedata = True
 	normalize = True
 	zscore = False
-	classification = False
+	classification = True
 	write_address = os.path.abspath("../pdata/")  # pdata Stands for processed data
 	data_address = os.path.abspath("../data/")
 	data_files = os.listdir(data_address)
@@ -219,32 +219,44 @@ def main():
 			input_data = getInputData(daily_database, monthly_database)
 			all_datas.append(input_data)
 
+	all_datas = numpy.array(all_datas, dtype = numpy.float64)
 	if normalize:
 		# first axis is depth which is each stock
 		# second axis is row which is each month
-		# third axis is col which is every input
-		all_datas = numpy.array(all_datas, dtype = numpy.float64)
-		size = all_datas.shape[2]
-		for col in range(size):
-			if col == size - 2:
-				continue
-			if zscore:
-				# z-score implementation
-				mu = numpy.mean(all_datas[:,:,col])
-				sigma = numpy.std(all_datas[:,:,col])
-				all_datas[:,:,col] = (all_datas[:,:,col] - mu)/sigma
-			else:
-				# normalize by the maximum
-				minimum = numpy.amin(all_datas[:,:,col])
-				all_datas[:,:,col] = (all_datas[:,:,col]-minimum)
-				maximum = numpy.amax(all_datas[:,:,col])
-				all_datas[:,:,col] = all_datas[:,:,col]/maximum
-		# if classification:
-
+		# third axis is col which is every input, last col is label
+		for row in range(all_datas.shape[1]):
+			for col in range(all_datas.shape[2]):
+				if col == all_datas.shape[2] - 2:
+					continue
+				if zscore:
+					# z-score implementation
+					mu = numpy.mean(all_datas[:,row,col])
+					sigma = numpy.std(all_datas[:,row,col])
+					all_datas[:,row,col] = (all_datas[:,row,col] - mu)/sigma
+				else:
+					# normalize by the maximum
+					minimum = numpy.amin(all_datas[:,row,col])
+					all_datas[:,row,col] = (all_datas[:,row,col]-minimum)
+					maximum = numpy.amax(all_datas[:,row,col])
+					all_datas[:,row,col] = all_datas[:,row,col]/maximum
+	
+	if classification:
+		# find the median value in the output list and classify them into two class
+		# add another row for class two
+		all_datas = numpy.append(all_datas, numpy.zeros((all_datas.shape[0],all_datas.shape[1],1)),axis=2)
+		for row in range(all_datas.shape[1]):
+			median = numpy.median(all_datas[:,row,-2])
+			for depth in range(all_datas.shape[0]):
+				if all_datas[depth,row,-2] > median:
+					all_datas[depth,row,-1] = 0
+					all_datas[depth,row,-2] = 1
+				else:
+					all_datas[depth,row,-1] = 1
+					all_datas[depth,row,-2] = 0
 
 	# write the data into the write folder
-	print("Found Input Data has dimention",len(all_datas))
-	for id in range(len(all_datas)):
+	print("Found Input Data has dimention",all_datas.shape[0])
+	for id in range(all_datas.shape[0]):
 		file_name = "%d.csv"%id
 		write_path = os.path.join(write_address, file_name)
 		write_data = all_datas[id,:,:]

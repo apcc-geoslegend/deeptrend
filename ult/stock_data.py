@@ -17,6 +17,7 @@ class StockData:
 		self.y_ids = []
 		self.train_size = 0
 		self.test_precentage = 0
+		self.classification = False
 
 	def getInputSize(self):
 		if self.found_data == True:
@@ -74,8 +75,15 @@ class StockData:
 		self.train_data = numpy.array(self.train_data)
 		self.test_data = numpy.array(self.test_data)
 		self.train_size = self.train_data.shape[0]
-		self.x_ids = [x for x in range(self.train_data.shape[1]-1)]
-		self.y_ids = [int(self.train_data.shape[1]-1)]
+		if self.train_data.shape[1] == 35:
+			# it's a classification lable
+			self.x_ids = [x for x in range(self.train_data.shape[1] - 2)]
+			self.y_ids = [self.train_data.shape[1]-2, self.train_data.shape[1]-1]
+			self.classification = True
+		else:
+			self.x_ids = [x for x in range(self.train_data.shape[1]-1)]
+			self.y_ids = [self.train_data.shape[1]-1]
+
 		self.found_data = True
 
 	def nextBatch(self, num):
