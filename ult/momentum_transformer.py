@@ -202,7 +202,7 @@ def generateFakeData(input_data):
 
 def main():
 	use_fakedata = True
-	zscore = False
+	zscore = True
 
 	write_address = os.path.abspath("../pdata/")  # pdata Stands for processed data
 	data_address = os.path.abspath("../data/")
@@ -260,7 +260,7 @@ def main():
 				all_datas[:,row,tcol] = (all_datas[:,row,col]-minimum+0.01)
 				# divide by the new maximum to normalze the data from 0 to 1
 				maximum = numpy.amax(all_datas[:,row,tcol])
-				all_datas[:,row,tcol] = all_datas[:,row,tcol]/maximum
+				all_datas[:,row,tcol] = (all_datas[:,row,tcol] / maximum) * 0.99
 
 	# find the median value in the output list and classify them into two class
 	# add three rows to store the normalized stock value, the 

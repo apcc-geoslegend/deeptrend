@@ -89,7 +89,7 @@ class StockData:
 		test_data = numpy.reshape(test_data, (test_data.shape[0]*test_data.shape[1],test_data.shape[2]))
 
 		print("Get %d tranning data, get %d testing data, %d backtest data"%
-			(train_data.shape[0],test_data.shape[0],backtest_data.shape[2]) )
+			(train_data.shape[0],test_data.shape[0],backtest_data.shape[1]) )
 
 		numpy.random.shuffle(train_data)
 		self.train_data = train_data
@@ -137,7 +137,11 @@ if __name__ == '__main__':
 	database.setClassification(True)
 	for i in range(1000):
 		train_batch, label_batch = database.nextBatch(100)
+
 	test_data, test_lable = database.getTestData()
-	print(test_lable)
+	print(train_batch.shape)
+	print(label_batch.shape)
+	print(test_data.shape)
+	print(test_lable.shape)
 	# print(database.getBacktestData())
 

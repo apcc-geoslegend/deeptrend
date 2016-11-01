@@ -7,6 +7,7 @@ import os
 sys.path.insert(0, os.path.abspath(".."))
 from ult.stock_data import StockData
 import tensorflow as tf
+import numpy
 
 FLAGS = None
 
@@ -16,7 +17,7 @@ def data_type():
 def main(_):
   # mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
   db = StockData()
-  db.readDataSet("../pdata/", 0.2)
+  db.readDataSet("../pdata/", test_precentage = 0.4, backtest_precentage = 0.03)
 
   input_size = db.getInputSize()
   output_size = db.getOutputSize()
@@ -38,7 +39,6 @@ def main(_):
   #     b = tf.Variable(tf.truncated_normal([output_size]))
   #   else:
   #     W = tf.Variable(tf.truncated_normal([]))
-  #   w = tf.Variable(tf.zeros)
 
   # Create the model
   W1 = tf.Variable(tf.truncated_normal([input_size, h1_nodes_num],  stddev=0.1,dtype=data_type()))
@@ -76,6 +76,7 @@ def main(_):
   sess = tf.InteractiveSession()
   # Train
   tf.initialize_all_variables().run()
+  tmp = None
   for _ in range(1000):
     batch_xs, batch_ys = db.nextBatch(100)
     sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
@@ -98,19 +99,11 @@ def main(_):
     for row in range(backtest_data.shape[1]):
       input = backtest_data[:,row, 0:35].reshape(backtest_data.shape[0],35)
       output = sess.run(y, feed_dict={x:input})
-      print(output)
-      break
-      # class1 = output[:,0]
-      # for id, n in enumerate(output):
-      #   pass
-      # acc_return = numpy.sum(class1[-10:0])
-      # break
-
-
-      # for depth in backtest_data.shape[0]:
-      #   input = backtest_data[depth,row,0:35].reshape(1,35)
-      #   output = sess.run(y, feed_dict={x: input})
-      #   print(output)
+      # print(output)
+      class1 = output[:,0]
+      sort_ids = numpy.argsort(class1)
+      acc_return += numpy.sum(backtest_data[sort_ids[-20:],row,-4])
+      print("Accumulated return in month %d is %f"%(row, acc_return))
 
   backTest()
 
