@@ -9,8 +9,9 @@ class StockData:
 	def __init__(self):
 		self.all_datas = []
 		self.randidx = []
-		self.train_data = []
-		self.test_data = []
+		self.train_data = None
+		self.test_data = None
+		self.backtest_data = None
 		self.current_id = 0
 		self.found_data = False
 		self.x_ids = []
@@ -38,6 +39,17 @@ class StockData:
 		if self.found_data == True:
 			return self.test_data.shape[0]
 
+	def setClassification(self, classification):
+		self.classification = classification
+		if classification:
+			# it's a classification lable
+			self.x_ids = [x for x in range(self.train_data.shape[1] - 2)]
+			self.y_ids = [self.train_data.shape[1]-2, self.train_data.shape[1]-1]
+			self.classification = True
+		else:
+			# this is a normalized montly return value
+			self.x_ids = [x for x in range(self.train_data.shape[1]-1)]
+			self.y_ids = [self.train_data.shape[1]-3]
 
 	def getData(self, file_path):
 		file_path = os.path.abspath(file_path)
@@ -49,41 +61,51 @@ class StockData:
 			# data_array = numpy.array(data)
 			return data
 
-	def readDataSet(self, data_dir, test_precentage = 0.1):
+	def readDataSet(self, data_dir, classification = True, test_precentage = 0.1, backtest_precentage = 0.1):
+		file_path = os.path.join(data_dir,"stock.db")
+		with open(file_path,'rb') as bfile:
+			read_datas = numpy.load(bfile)
+			print("Read the Database has shape",read_datas.shape)
+		
 		# read all data input a numpy array
 		self.test_precentage = test_precentage
+		self.backtest_precentage = backtest_precentage
+		self.classification = classification
+		#
+		total_month = read_datas.shape[1]
+		test_start_id = int(total_month*(1 - test_precentage - backtest_precentage))
+		backtest_start_id = int(total_month*(1 - backtest_precentage))
+		print("total month", total_month, "teast start id", test_start_id, "backtest start id", backtest_start_id)
+
 		# first axis is depth which is each stock
 		# second axis is row which is each month
 		# third axis is col which is every input
-		data_dir = os.path.abspath(data_dir)
-		data_files = os.listdir(data_dir)
-		
-		for file in data_files:
-			file_path = os.path.join(data_dir, file)
-			new_data = self.getData(file_path)
-			total_length = len(new_data)
-			test_length = int(total_length * test_precentage)
-			# from 0 to (total - test) is trainning data
-			for id in range(0, total_length - test_length):
-				self.train_data.append(new_data[id])
-			# form (total -test) to total is test data
-			for id in range(total_length - test_length, total_length):
-				self.test_data.append(new_data[id])
+		# [0...(train_data)...test_start_id...(test_data)...backtest_start_id...(backtest_data)...end]
+		train_data = read_datas[:,0:test_start_id,:]
+		test_data = read_datas[:,test_start_id:backtest_start_id,:]
+		backtest_data = read_datas[:,backtest_start_id:total_month,:]
+		# reshape the data 
+		train_data = numpy.reshape(train_data, (train_data.shape[0]*train_data.shape[1],train_data.shape[2]))
+		test_data = numpy.reshape(test_data, (test_data.shape[0]*test_data.shape[1],test_data.shape[2]))
 
-		print("Get %d tranning data, get %d testing data"%(len(self.train_data),len(self.test_data)))
-		random.shuffle(self.train_data)
-		self.train_data = numpy.array(self.train_data)
-		self.test_data = numpy.array(self.test_data)
+		print("Get %d tranning data, get %d testing data, %d backtest data"%
+			(train_data.shape[0],test_data.shape[0],backtest_data.shape[2]) )
+
+		numpy.random.shuffle(train_data)
+		self.train_data = train_data
+		self.test_data = test_data
+		self.backtest_data = backtest_data
+
 		self.train_size = self.train_data.shape[0]
-		if self.train_data.shape[1] == 35:
+		if classification:
 			# it's a classification lable
 			self.x_ids = [x for x in range(self.train_data.shape[1] - 2)]
 			self.y_ids = [self.train_data.shape[1]-2, self.train_data.shape[1]-1]
 			self.classification = True
 		else:
+			# this is a normalized montly return value
 			self.x_ids = [x for x in range(self.train_data.shape[1]-1)]
-			self.y_ids = [self.train_data.shape[1]-1]
-
+			self.y_ids = [self.train_data.shape[1]-3]
 		self.found_data = True
 
 	def nextBatch(self, num):
@@ -101,13 +123,21 @@ class StockData:
 	def getTestData(self):
 		return self.test_data[:,self.x_ids], self.test_data[:,self.y_ids]
 
+	def getBacktestData(self):
+		return self.backtest_data
+
+	def parseInputOutput(self,data):
+		return data[:,self.x_ids], self.test_data[:,self.y_ids]
+
 if __name__ == '__main__':
 	# usecase example
 	data_dir = "../pdata/"
 	database = StockData()
 	database.readDataSet(data_dir)
+	database.setClassification(True)
 	for i in range(1000):
 		train_batch, label_batch = database.nextBatch(100)
 	test_data, test_lable = database.getTestData()
 	print(test_lable)
+	# print(database.getBacktestData())
 

@@ -10,6 +10,9 @@ import tensorflow as tf
 
 FLAGS = None
 
+def data_type():
+  return tf.float32
+
 def main(_):
   # mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
   db = StockData()
@@ -21,14 +24,33 @@ def main(_):
   h1_nodes_num = 100
   h2_nodes_num = 50
 
-  # Create the model
   x = tf.placeholder(tf.float32, shape=[None, input_size])
-  W1 = tf.Variable(tf.zeros([input_size, h1_nodes_num]))
-  b1 = tf.Variable(tf.zeros([h1_nodes_num]))
-  W2 = tf.Variable(tf.zeros([h1_nodes_num, h2_nodes_num]))
-  b2 = tf.Variable(tf.zeros([h2_nodes_num]))
-  Wo = tf.Variable(tf.zeros([h2_nodes_num, output_size]))
-  bo = tf.Variable(tf.zeros([output_size]))
+
+  # layers = [100 50 25 12 6]
+  # weights = []
+  # bias = []
+  # for id,layer in enumerate(layers):
+  #   if id == 0:
+  #     W = tf.Variable(tf.truncated_normal([input_size, layer]))
+  #     b = tf.Variable(tf.truncated_normal([layer]))
+  #   else if id == len(layers):
+  #     W = tf.Variable(tf.truncated_normal([layer, output_size]))
+  #     b = tf.Variable(tf.truncated_normal([output_size]))
+  #   else:
+  #     W = tf.Variable(tf.truncated_normal([]))
+  #   w = tf.Variable(tf.zeros)
+
+  # Create the model
+  W1 = tf.Variable(tf.truncated_normal([input_size, h1_nodes_num],  stddev=0.1,dtype=data_type()))
+  b1 = tf.Variable(tf.truncated_normal([h1_nodes_num],              stddev=0.1,dtype=data_type()))
+  W2 = tf.Variable(tf.truncated_normal([h1_nodes_num, h2_nodes_num],stddev=0.1,dtype=data_type()))
+  b2 = tf.Variable(tf.truncated_normal([h2_nodes_num],              stddev=0.1,dtype=data_type()))
+  Wo = tf.Variable(tf.truncated_normal([h2_nodes_num, output_size], stddev=0.1,dtype=data_type()))
+  bo = tf.Variable(tf.truncated_normal([output_size],               stddev=0.1,dtype=data_type()))
+
+  W1 = tf.nn.dropout(W1, 0.5)
+  W2 = tf.nn.dropout(W2, 0.5)
+  Wo = tf.nn.dropout(Wo, 0.5)
 
   vh1 = tf.matmul(x, W1) + b1
   vh2 = tf.matmul(vh1, W2) + b2
@@ -42,7 +64,14 @@ def main(_):
     loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
   else:
     loss = tf.reduce_mean(tf.square(y - y_))
-  train_step = tf.train.GradientDescentOptimizer(0.5).minimize(loss)
+
+  # add regularizer
+  regularizers = (tf.nn.l2_loss(W1) + tf.nn.l2_loss(b1) +
+                  tf.nn.l2_loss(W2) + tf.nn.l2_loss(b2) +
+                  tf.nn.l2_loss(Wo) + tf.nn.l2_loss(bo)
+                  )
+  loss += 5e-4 * regularizers
+  train_step = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
 
   sess = tf.InteractiveSession()
   # Train
@@ -57,11 +86,34 @@ def main(_):
     correct_prediction = tf.equal(tf.argmax(y, 1), tf.argmax(y_, 1))
     evaluation = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
     output = sess.run(evaluation, feed_dict={x: test_input, y_:test_label})
-    print("Accuracy is",output)
+    print("Accuracy is %f"%output)
   else:
     evaluation = tf.reduce_mean(tf.abs(y - y_))
     output = sess.run(evaluation, feed_dict={x: test_input, y_:test_label})
     print("The mean L1 loss of test data is",output)
+  backtest_data = db.getBacktestData()
+
+  def backTest():
+    acc_return = 0
+    for row in range(backtest_data.shape[1]):
+      input = backtest_data[:,row, 0:35].reshape(backtest_data.shape[0],35)
+      output = sess.run(y, feed_dict={x:input})
+      print(output)
+      break
+      # class1 = output[:,0]
+      # for id, n in enumerate(output):
+      #   pass
+      # acc_return = numpy.sum(class1[-10:0])
+      # break
+
+
+      # for depth in backtest_data.shape[0]:
+      #   input = backtest_data[depth,row,0:35].reshape(1,35)
+      #   output = sess.run(y, feed_dict={x: input})
+      #   print(output)
+
+  backTest()
+
 
 if __name__ == '__main__':
   tf.app.run()

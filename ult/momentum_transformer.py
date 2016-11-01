@@ -137,10 +137,21 @@ def getInputData(daily_database, monthly_database):
 
 	# pass
 def parseDataBase(file_path):
+	'''
+	parse a signel file into daily database and monthly database
+	one assumption of using this function is that the data lenght is the same
+	for every stock
+	'''
+
+	backtest_precentage = 0.1
 	daily_database = []
 	monthly_database = []
+	# total_lines = row_count = sum(1 for line in open(file_path))
+	# backtest_start_index = int(total_lines * backtest_precentage)
+	# print(total_lines, backtest_start_index)
 	with open(file_path, 'rt') as csvfile:
 		reader = csv.DictReader(csvfile, delimiter=',', skipinitialspace=True)
+		# calculate the backtest index
 		# read the dates first
 		last_month_date = None
 		last_month_id = -1
@@ -157,6 +168,7 @@ def parseDataBase(file_path):
 			else:
 				if not isSameMonth(date, last_month_date):
 					# new month value is equal to last day closed price
+					# get the new month from last day in the daily database
 					new_month = daily_database[-1]
 					new_month_value = new_month[2] # 2 is the closed value
 					monthly_return = calAR(last_month_value, new_month_value)
@@ -190,9 +202,8 @@ def generateFakeData(input_data):
 
 def main():
 	use_fakedata = True
-	normalize = True
 	zscore = False
-	classification = True
+
 	write_address = os.path.abspath("../pdata/")  # pdata Stands for processed data
 	data_address = os.path.abspath("../data/")
 	data_files = os.listdir(data_address)
@@ -211,7 +222,7 @@ def main():
 		for x in range(100):
 			fake_data = generateFakeData(sample_data)
 			all_datas.append(fake_data)
-		print("Generated %d Fake Data has size"%len(fake_data))
+		print("Generated %d Fake Data which all have size %d"%(len(all_datas),len(fake_data)))
 	else:
 		for file in data_files:
 			file_path = os.path.join(data_address, file)
@@ -220,47 +231,67 @@ def main():
 			all_datas.append(input_data)
 
 	all_datas = numpy.array(all_datas, dtype = numpy.float64)
-	if normalize:
-		# first axis is depth which is each stock
-		# second axis is row which is each month
-		# third axis is col which is every input, last col is label
-		for row in range(all_datas.shape[1]):
-			for col in range(all_datas.shape[2]):
-				if col == all_datas.shape[2] - 2:
-					continue
-				if zscore:
-					# z-score implementation
-					mu = numpy.mean(all_datas[:,row,col])
-					sigma = numpy.std(all_datas[:,row,col])
-					all_datas[:,row,col] = (all_datas[:,row,col] - mu)/sigma
-				else:
-					# normalize by the maximum
-					minimum = numpy.amin(all_datas[:,row,col])
-					all_datas[:,row,col] = (all_datas[:,row,col]-minimum)
-					maximum = numpy.amax(all_datas[:,row,col])
-					all_datas[:,row,col] = all_datas[:,row,col]/maximum
-	
-	if classification:
-		# find the median value in the output list and classify them into two class
-		# add another row for class two
-		all_datas = numpy.append(all_datas, numpy.zeros((all_datas.shape[0],all_datas.shape[1],1)),axis=2)
-		for row in range(all_datas.shape[1]):
-			median = numpy.median(all_datas[:,row,-2])
-			for depth in range(all_datas.shape[0]):
-				if all_datas[depth,row,-2] > median:
-					all_datas[depth,row,-1] = 0
-					all_datas[depth,row,-2] = 1
-				else:
-					all_datas[depth,row,-1] = 1
-					all_datas[depth,row,-2] = 0
+	# add another row to the data to store the normalized output
+	all_datas = numpy.append(all_datas, numpy.zeros((all_datas.shape[0],all_datas.shape[1],1)),axis=2)
+	# first axis is depth which is each stock
+	# second axis is row which is each month
+	# third axis is col which is every input, last col is label
+	# [... flag, monthly_return, normalized_montly_return]
+	for row in range(all_datas.shape[1]):
+		for col in range(all_datas.shape[2]):
+			# if col is the flag col don't nromalize, if col is the last col don't normalize 
+			if col == all_datas.shape[2] - 3 or col == all_datas.shape[2] - 1:
+				continue
+			# if the col is the montly return col feed the data to tcol
+			if col == all_datas.shape[2] - 2:
+				tcol = col + 1
+			else:
+				tcol = col
+ 
+			if zscore:
+				# z-score implementation
+				mu = numpy.mean(all_datas[:,row,col])
+				sigma = numpy.std(all_datas[:,row,col])
+				all_datas[:,row,tcol] = (all_datas[:,row,col] - mu)/sigma
+			else:
+				# normalize by the maximum and put the result to tcol
+				# minus the minimal first to get all data positive
+				minimum = numpy.amin(all_datas[:,row,col])
+				all_datas[:,row,tcol] = (all_datas[:,row,col]-minimum+0.01)
+				# divide by the new maximum to normalze the data from 0 to 1
+				maximum = numpy.amax(all_datas[:,row,tcol])
+				all_datas[:,row,tcol] = all_datas[:,row,tcol]/maximum
 
-	# write the data into the write folder
-	print("Found Input Data has dimention",all_datas.shape[0])
-	for id in range(all_datas.shape[0]):
-		file_name = "%d.csv"%id
-		write_path = os.path.join(write_address, file_name)
-		write_data = all_datas[id,:,:]
-		writeInputData(write_path, all_datas[id,:,:])
+	# find the median value in the output list and classify them into two class
+	# add three rows to store the normalized stock value, the 
+	all_datas = numpy.append(all_datas, numpy.zeros((all_datas.shape[0],all_datas.shape[1],2)),axis=2)
+	# normalize the data 
+	# [... flag, monthly_return, normalized_montly_return, class1, class2]
+	for row in range(all_datas.shape[1]):
+		median = numpy.median(all_datas[:,row,-4])
+		for depth in range(all_datas.shape[0]):
+			if all_datas[depth,row,- 4] > median:
+				all_datas[depth,row,-1] = 0
+				all_datas[depth,row,-2] = 1
+			else:
+				all_datas[depth,row,-1] = 1
+				all_datas[depth,row,-2] = 0
+
+	# write into a numpy binary file
+	write_path = os.path.join(write_address, "stock.db")
+	with open(write_path, 'wb') as bfile:
+		numpy.save(bfile, all_datas)
+
+	# test if the file is really wroted
+	with open(write_path,'rb') as bfile:
+		read_datas = numpy.load(bfile)
+		print("Saved as Database has shape",read_datas.shape)
+
+	# write a sample of readable data 
+	file_name = "sample.csv"
+	write_path = os.path.join(write_address, file_name)
+	write_data = all_datas[0,:,:]
+	writeInputData(write_path, all_datas[0,:,:])
 
 if __name__ == '__main__':
 	main()
