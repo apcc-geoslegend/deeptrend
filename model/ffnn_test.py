@@ -17,7 +17,7 @@ def data_type():
 def main(_):
   # mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
   db = StockData()
-  db.readDataSet("../pdata/", test_precentage = 0.4, backtest_precentage = 0.03)
+  db.readDataSet("../pdata/", classification = True,test_precentage = 0.4, backtest_precentage = 0.03)
 
   input_size = db.getInputSize()
   output_size = db.getOutputSize()
@@ -119,23 +119,27 @@ def main(_):
     output = sess.run(evaluation, feed_dict={x: test_input, y_:test_label})
     print("The mean L1 loss of test data is",output)
   backtest_data = db.getBacktestData()
+  num_stock_to_buy = 15
 
   def backTest():
     acc_return = 0
     for row in range(backtest_data.shape[1]):
-      input = backtest_data[:,row, 0:35].reshape(backtest_data.shape[0],35)
+      input = backtest_data[:,row, db.x_ids].reshape(backtest_data.shape[0], len(db.x_ids))
       output = sess.run(y, feed_dict={x:input})
-      class1 = output[:,0]
-      # argsort the class1
-      sort_ids = numpy.argsort(class1)
-      # -20: is the last 20 row in sorted id
-      # col -4 is the next month return
-      acc_return += numpy.sum(backtest_data[sort_ids[-20:],row,-4])
-      print("Accumulated return in month %d is %f"%(row, acc_return))
-    # print(output)
+      if db.classification:
+        class1 = output[:,0]
+        # argsort the class1
+        sort_ids = numpy.argsort(class1)
+        # -20: is the last 20 row in sorted id
+        # col -4 is the next month return
+        acc_return += numpy.sum(backtest_data[sort_ids[-num_stock_to_buy:],row,-4])
+        print("Accumulated return in month %d is %f"%(row, acc_return))
+      else:
+        sort_ids = numpy.argsort(output)
+        acc_return += numpy.sum(backtest_data[sort_ids[0:num_stock_to_buy], row, -4])
+    return acc_return
 
   backTest()
-
-
+    
 if __name__ == '__main__':
   tf.app.run()

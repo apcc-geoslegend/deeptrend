@@ -43,12 +43,11 @@ class StockData:
 		self.classification = classification
 		if classification:
 			# it's a classification lable
-			self.x_ids = [x for x in range(self.train_data.shape[1] - 2)]
+			self.x_ids = [x for x in range(self.train_data.shape[1] - 4)]
 			self.y_ids = [self.train_data.shape[1]-2, self.train_data.shape[1]-1]
-			self.classification = True
 		else:
 			# this is a normalized montly return value
-			self.x_ids = [x for x in range(self.train_data.shape[1]-1)]
+			self.x_ids = [x for x in range(self.train_data.shape[1] - 4)]
 			self.y_ids = [self.train_data.shape[1]-3]
 
 	def getData(self, file_path):
@@ -96,15 +95,7 @@ class StockData:
 		self.backtest_data = backtest_data
 
 		self.train_size = self.train_data.shape[0]
-		if classification:
-			# it's a classification lable
-			self.x_ids = [x for x in range(self.train_data.shape[1] - 2)]
-			self.y_ids = [self.train_data.shape[1]-2, self.train_data.shape[1]-1]
-			self.classification = True
-		else:
-			# this is a normalized montly return value
-			self.x_ids = [x for x in range(self.train_data.shape[1]-1)]
-			self.y_ids = [self.train_data.shape[1]-3]
+		self.setClassification(classification)
 		self.found_data = True
 
 	def nextBatch(self, num):
@@ -133,7 +124,7 @@ class StockData:
 		return self.backtest_data
 
 	def parseInputOutput(self,data):
-		return data[:,self.x_ids], self.test_data[:,self.y_ids]
+		return data[:,self.x_ids], data[:,self.y_ids]
 
 if __name__ == '__main__':
 	# usecase example
