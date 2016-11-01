@@ -108,12 +108,8 @@ class StockData:
 				end_id = num
 			self.current_id = end_id
 			assert num == (end_id - start_id)
-			# print(start_id)
-			# print(end_id)
 			input = self.train_data[start_id:end_id, self.x_ids]
 			label = self.train_data[start_id:end_id, self.y_ids]
-			assert input.shape[0] == num
-			assert label.shape[0] == num
 			return input, label
 		else:
 			print("Can't find the data, You need to Read Data First! use readDataSet()")
