@@ -60,6 +60,7 @@ def main(_):
   regularizers = tf.reduce_mean([tf.nn.l2_loss(w) for w in weights] + [tf.nn.l2_loss(b) for b in bias])
   loss += 5e-4 * regularizers
   train_step = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
+  # train_step = tf.train.MomentumOptimizer(0.01, 0.9).minimize(loss)
 
   ####
   # h1_nodes_num = 100
@@ -137,9 +138,10 @@ def main(_):
       else:
         sort_ids = numpy.argsort(output)
         acc_return += numpy.sum(backtest_data[sort_ids[0:num_stock_to_buy], row, -4])
+    # print(output)
     return acc_return
 
   backTest()
-    
+
 if __name__ == '__main__':
   tf.app.run()

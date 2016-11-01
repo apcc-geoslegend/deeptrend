@@ -103,8 +103,9 @@ class StockData:
 			start_id = self.current_id
 			end_id = start_id + num
 			if end_id > self.train_size:
-				start_id = start_id - self.train_size
-				end_id = end_id - self.train_size
+				numpy.random.shuffle(self.train_data)
+				start_id = 0
+				end_id = num
 			self.current_id = end_id
 			assert num == (end_id - start_id)
 			# print(start_id)
