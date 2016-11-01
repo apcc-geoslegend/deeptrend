@@ -17,13 +17,13 @@ def data_type():
 def main(_):
   # mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
   db = StockData()
-  db.readDataSet("../pdata/", classification = True,test_precentage = 0.4, backtest_precentage = 0.03)
+  db.readDataSet("../pdata/", classification = True, test_precentage = 0.4, backtest_precentage = 0.03)
 
   input_size = db.getInputSize()
   output_size = db.getOutputSize()
 
   ####
-  layers = [100,50]
+  layers = [100,100,100]
   weights = []
   bias = []
 
@@ -48,13 +48,16 @@ def main(_):
     else:
       vh = tf.matmul(vh, weights[id]) + bias[id]
 
+  # y = tf.clip_by_value(y,1e-10,1.0)
+  y = (y - tf.reduce_min(y) + 1e-10)/(tf.reduce_max(y)-tf.reduce_min(y))
   y_ = tf.placeholder(tf.float32, shape=[None, output_size])
 
   # use L2 loss 
   if db.classification == True:
     loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
+    # loss = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y,1e-10,1.0)))
   else:
-    loss = tf.reduce_mean(tf.square(y - y_))
+    loss = tf.nn.l2_loss(y - y_)
 
   # add regularizer
   regularizers = tf.reduce_mean([tf.nn.l2_loss(w) for w in weights] + [tf.nn.l2_loss(b) for b in bias])
@@ -134,11 +137,12 @@ def main(_):
         # -20: is the last 20 row in sorted id
         # col -4 is the next month return
         acc_return += numpy.sum(backtest_data[sort_ids[-num_stock_to_buy:],row,-4])
-        print("Accumulated return in month %d is %f"%(row, acc_return))
       else:
         sort_ids = numpy.argsort(output)
         acc_return += numpy.sum(backtest_data[sort_ids[0:num_stock_to_buy], row, -4])
+      print("Accumulated return in month %d is %f"%(row, acc_return))
     # print(output)
+    # print(backtest_data[:,row,db.y_ids])
     return acc_return
 
   backTest()
