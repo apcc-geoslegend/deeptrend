@@ -39,7 +39,7 @@ def isSameDate(date1, date2):
 	return True
 
 def getAMRs(month_date, monthly_database, num_month, month_id = -1):
-
+	# get accumulative last num_month montly return
 	current_month_id = -1
 	if month_id < 0:
 		for id, data in enumerate(monthly_database):
@@ -68,6 +68,7 @@ def getAMRs(month_date, monthly_database, num_month, month_id = -1):
 	return amr
 
 def getADRs(day, daily_database, num_day):
+	# get accumulative last num_day daily retrun
 	current_day_id = -1
 	for id, data in enumerate(daily_database):
 		if isSameDate(day, data[0]):
@@ -92,6 +93,7 @@ def getADRs(day, daily_database, num_day):
 	return adr
 
 def getNextMR(month_date, monthly_database, month_id = -1):
+	# get next month monthly return
 	if month_id < 0:
 		for id, data in enumerate(monthly_database):
 			if isSameMonth(month_date, data[0]):
@@ -100,6 +102,7 @@ def getNextMR(month_date, monthly_database, month_id = -1):
 	else:
 		current_month_id = month_id
 
+	# if it's the last month, we don't have the data
 	if current_month_id == len(monthly_database)-1:
 		return None
 
@@ -135,7 +138,6 @@ def getInputData(daily_database, monthly_database):
 		input_datas.append(input_data)
 	return input_datas
 
-	# pass
 def parseDataBase(file_path):
 	'''
 	parse a signel file into daily database and monthly database

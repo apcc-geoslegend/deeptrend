@@ -84,7 +84,7 @@ class StockData:
 		train_data = read_datas[:,0:test_start_id,:]
 		test_data = read_datas[:,test_start_id:backtest_start_id,:]
 		backtest_data = read_datas[:,backtest_start_id:total_month,:]
-		# reshape the data 
+		# reshape the data into two dimensional array
 		train_data = numpy.reshape(train_data, (train_data.shape[0]*train_data.shape[1],train_data.shape[2]))
 		test_data = numpy.reshape(test_data, (test_data.shape[0]*test_data.shape[1],test_data.shape[2]))
 

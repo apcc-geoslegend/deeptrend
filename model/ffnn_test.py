@@ -99,11 +99,14 @@ def main(_):
     for row in range(backtest_data.shape[1]):
       input = backtest_data[:,row, 0:35].reshape(backtest_data.shape[0],35)
       output = sess.run(y, feed_dict={x:input})
-      # print(output)
       class1 = output[:,0]
+      # argsort the class1
       sort_ids = numpy.argsort(class1)
+      # -20: is the last 20 row in sorted id
+      # col -4 is the next month return
       acc_return += numpy.sum(backtest_data[sort_ids[-20:],row,-4])
       print("Accumulated return in month %d is %f"%(row, acc_return))
+    # print(output)
 
   backTest()
 
