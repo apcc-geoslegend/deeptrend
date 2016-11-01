@@ -3,6 +3,7 @@ import os.path
 import numpy
 import copy
 import random
+import momentum_transformer as ms
 
 class StockData:
 
@@ -61,7 +62,10 @@ class StockData:
 			return data
 
 	def readDataSet(self, data_dir, classification = True, test_precentage = 0.1, backtest_precentage = 0.1):
-		file_path = os.path.join(data_dir,"stock.db")
+		file_path = os.path.join(data_dir, ms.DATA_VERSION+".db")
+		if not os.path.exists(file_path):
+			ms.generateDataBase()
+
 		with open(file_path,'rb') as bfile:
 			read_datas = numpy.load(bfile)
 			print("Read the Database has shape",read_datas.shape)

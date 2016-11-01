@@ -15,6 +15,7 @@ def data_type():
   return tf.float32
 
 def main(_):
+  max_train_steps = 1000
   # mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
   db = StockData()
   db.readDataSet("../pdata/", classification = True, test_precentage = 0.4, backtest_precentage = 0.03)
@@ -59,57 +60,35 @@ def main(_):
   else:
     loss = tf.nn.l2_loss(y - y_)
 
+  global_step = tf.Variable(0, dtype=data_type())
   # add regularizer
   regularizers = tf.reduce_mean([tf.nn.l2_loss(w) for w in weights] + [tf.nn.l2_loss(b) for b in bias])
   loss += 5e-4 * regularizers
-  train_step = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
-  # train_step = tf.train.MomentumOptimizer(0.01, 0.9).minimize(loss)
 
-  ####
-  # h1_nodes_num = 100
-  # h2_nodes_num = 50
+  learning_rate = tf.train.exponential_decay(
+      0.01,                # Base learning rate.
+      global_step,         # Current index into the dataset.
+      max_train_steps,     # Decay step.
+      0.95,                # Decay rate.
+      staircase=True)
 
-  # x = tf.placeholder(tf.float32, shape=[None, input_size])
-  # # Create the model
-  # W1 = tf.Variable(tf.truncated_normal([input_size, h1_nodes_num],  stddev=0.1,dtype=data_type()))
-  # b1 = tf.Variable(tf.truncated_normal([h1_nodes_num],              stddev=0.1,dtype=data_type()))
-  # W2 = tf.Variable(tf.truncated_normal([h1_nodes_num, h2_nodes_num],stddev=0.1,dtype=data_type()))
-  # b2 = tf.Variable(tf.truncated_normal([h2_nodes_num],              stddev=0.1,dtype=data_type()))
-  # Wo = tf.Variable(tf.truncated_normal([h2_nodes_num, output_size], stddev=0.1,dtype=data_type()))
-  # bo = tf.Variable(tf.truncated_normal([output_size],               stddev=0.1,dtype=data_type()))
-
-  # W1 = tf.nn.dropout(W1, 0.5)
-  # W2 = tf.nn.dropout(W2, 0.5)
-  # Wo = tf.nn.dropout(Wo, 0.5)
-
-  # vh1 = tf.matmul(x, W1) + b1
-  # vh2 = tf.matmul(vh1, W2) + b2
-  # y = tf.matmul(vh2, Wo) + bo
-
-  # # Define loss and optimizer
-  # y_ = tf.placeholder(tf.float32, shape=[None, output_size])
-
-  # # use L2 loss 
-  # if db.classification == True:
-  #   loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
-  # else:
-  #   loss = tf.reduce_mean(tf.square(y - y_))
-
-  # # add regularizer
-  # regularizers = (tf.nn.l2_loss(W1) + tf.nn.l2_loss(b1) +
-  #                 tf.nn.l2_loss(W2) + tf.nn.l2_loss(b2) +
-  #                 tf.nn.l2_loss(Wo) + tf.nn.l2_loss(bo)
-  #                 )
-  # loss += 5e-4 * regularizers
-  # train_step = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
-  ####
+  # train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
+  # train_step = tf.train.AdadeltaOptimizer(learning_rate, 0.9).minimize(loss,global_step=global_step)
+  # train_step = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
+  # train_step = tf.train.AdagradDAOptimizer(learning_rate, global_step=global_step).minimize(loss)
+  train_step = tf.train.MomentumOptimizer(learning_rate, 0.9).minimize(loss, global_step=global_step)
+  # train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss,global_step=global_step)
+  # train_step = tf.train.FtrlOptimizer(learning_rate).minimize(loss.global_step=global_step)
+  # train_step = tf.train.RMSPropOptimizer(learning_rate).minimize(loss,global_step=global_step)
+  # train_step = tf.train.RMSPropOptimizer(learning_rate).minimize(loss,global_step=global_step)
 
   sess = tf.InteractiveSession()
   # Train
   tf.initialize_all_variables().run()
-  for _ in xrange(1000):
+  for _ in xrange(max_train_steps):
     batch_xs, batch_ys = db.nextBatch(100)
-    sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
+    oput,lr = sess.run([train_step,learning_rate], feed_dict={x: batch_xs, y_: batch_ys})
+    # print("learning rate is",lr)
 
   test_input, test_label = db.getTestData()
   # Test trained model

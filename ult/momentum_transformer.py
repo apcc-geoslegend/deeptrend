@@ -1,6 +1,5 @@
-# this monthly transformer will transform what ever data file in ../data/
-# into ../fake_data/ as csv file with the specific designed input which can be directly
-# feed into neural network
+# this data transformer will transform what ever data file in ../data/
+# into a database file that using momenteum strategy
 
 import csv
 import os.path
@@ -202,12 +201,11 @@ def generateFakeData(input_data):
 	fake_array[:,-2] = input_array[:,-2]
 	return fake_array.tolist()
 
-def main():
-	use_fakedata = True
-	zscore = True
+DATA_VERSION = "0.1.0"
+def generateDataBase(data_address="../data", write_address="../pdata/", use_fakedata=True, zscore=True):
 
-	write_address = os.path.abspath("../pdata/")  # pdata Stands for processed data
-	data_address = os.path.abspath("../data/")
+	write_address = os.path.abspath(write_address)  # pdata Stands for processed data
+	data_address = os.path.abspath(data_address)
 	data_files = os.listdir(data_address)
 
 	if os.path.exists(write_address):
@@ -280,7 +278,7 @@ def main():
 				all_datas[depth,row,-2] = 0
 
 	# write into a numpy binary file
-	write_path = os.path.join(write_address, "stock.db")
+	write_path = os.path.join(write_address, DATA_VERSION+".db")
 	with open(write_path, 'wb') as bfile:
 		numpy.save(bfile, all_datas)
 
@@ -294,6 +292,9 @@ def main():
 	write_path = os.path.join(write_address, file_name)
 	write_data = all_datas[0,:,:]
 	writeInputData(write_path, all_datas[0,:,:])
+
+def main():
+	generateDataBase()
 
 if __name__ == '__main__':
 	main()
