@@ -1,3 +1,4 @@
 **/fake_data/
 **/pdata/
 **/__pycache__/
+*.pyc

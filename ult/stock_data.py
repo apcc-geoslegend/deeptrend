@@ -90,7 +90,6 @@ class StockData:
 
 		print("Get %d tranning data, get %d testing data, %d backtest data"%
 			(train_data.shape[0],test_data.shape[0],backtest_data.shape[1]) )
-
 		numpy.random.shuffle(train_data)
 		self.train_data = train_data
 		self.test_data = test_data
@@ -112,11 +111,18 @@ class StockData:
 		if self.found_data == True:
 			start_id = self.current_id
 			end_id = start_id + num
-			if end_id >= self.train_size:
+			if end_id > self.train_size:
 				start_id = start_id - self.train_size
 				end_id = end_id - self.train_size
 			self.current_id = end_id
-			return self.train_data[start_id:end_id, self.x_ids], self.train_data[start_id:end_id, self.y_ids]
+			assert num == (end_id - start_id)
+			# print(start_id)
+			# print(end_id)
+			input = self.train_data[start_id:end_id, self.x_ids]
+			label = self.train_data[start_id:end_id, self.y_ids]
+			assert input.shape[0] == num
+			assert label.shape[0] == num
+			return input, label
 		else:
 			print("Can't find the data, You need to Read Data First! use readDataSet()")
 
@@ -137,11 +143,11 @@ if __name__ == '__main__':
 	database.setClassification(True)
 	for i in range(1000):
 		train_batch, label_batch = database.nextBatch(100)
+		assert train_batch.shape[0]==100
+		assert label_batch.shape[0]==100
 
 	test_data, test_lable = database.getTestData()
-	print(train_batch.shape)
-	print(label_batch.shape)
 	print(test_data.shape)
 	print(test_lable.shape)
-	# print(database.getBacktestData())
+	assert test_data.shape[0]!=0
 

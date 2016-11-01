@@ -22,24 +22,42 @@ def main(_):
   input_size = db.getInputSize()
   output_size = db.getOutputSize()
 
-  h1_nodes_num = 100
-  h2_nodes_num = 50
+  ###
+  # h1_nodes_num = 100
+  # h2_nodes_num = 50
 
-  x = tf.placeholder(tf.float32, shape=[None, input_size])
+  # x = tf.placeholder(tf.float32, shape=[None, input_size])
 
-  # layers = [100 50 25 12 6]
+  # layers = [100,50,25,12,6]
   # weights = []
   # bias = []
   # for id,layer in enumerate(layers):
   #   if id == 0:
   #     W = tf.Variable(tf.truncated_normal([input_size, layer]))
   #     b = tf.Variable(tf.truncated_normal([layer]))
-  #   else if id == len(layers):
+  #   elif id == len(layers):
   #     W = tf.Variable(tf.truncated_normal([layer, output_size]))
   #     b = tf.Variable(tf.truncated_normal([output_size]))
   #   else:
-  #     W = tf.Variable(tf.truncated_normal([]))
+  #     W = tf.Variable(tf.truncated_normal([layers[id-1],layers[id]]))
+  #     b = tf.Variable(tf.truncated_normal([layers[id]]))
+  #   weights.append(W)
+  #   bias.append(b)
+  # # print(weights)
+  # # print(bias)
+  # for id in range(len(weights)):
+  #   if id == 0:
+  #     vh = tf.matmul(x, weights[id]) + bias[id]
+  #   elif id == len(weights):
+  #     vh = tf.matmul(vh,weights[id]) + bias[id]
+  #   else:
+  #     y = tf.matmul(vh, weights[id]) + bias[id]
 
+  ####
+  h1_nodes_num = 100
+  h2_nodes_num = 50
+
+  x = tf.placeholder(tf.float32, shape=[None, input_size])
   # Create the model
   W1 = tf.Variable(tf.truncated_normal([input_size, h1_nodes_num],  stddev=0.1,dtype=data_type()))
   b1 = tf.Variable(tf.truncated_normal([h1_nodes_num],              stddev=0.1,dtype=data_type()))
@@ -55,6 +73,8 @@ def main(_):
   vh1 = tf.matmul(x, W1) + b1
   vh2 = tf.matmul(vh1, W2) + b2
   y = tf.matmul(vh2, Wo) + bo
+
+  #####
 
   # Define loss and optimizer
   y_ = tf.placeholder(tf.float32, shape=[None, output_size])
@@ -72,12 +92,12 @@ def main(_):
                   )
   loss += 5e-4 * regularizers
   train_step = tf.train.GradientDescentOptimizer(0.1).minimize(loss)
+  ####
 
   sess = tf.InteractiveSession()
   # Train
   tf.initialize_all_variables().run()
-  tmp = None
-  for _ in range(1000):
+  for _ in xrange(1000):
     batch_xs, batch_ys = db.nextBatch(100)
     sess.run(train_step, feed_dict={x: batch_xs, y_: batch_ys})
 
