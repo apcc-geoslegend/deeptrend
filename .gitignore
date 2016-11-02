@@ -2,3 +2,4 @@
 **/pdata/
 **/__pycache__/
 *.pyc
+**/data/**

@@ -9,32 +9,33 @@ import numpy
 import copy
 import matplotlib.pyplot as plt
 import random
-from pyexcel_xls import get_data
-import json
 
 def parseDate(str):
-	v = str.split('/')
-	if len(v)!=3:
+	if len(str)!=8:
 		warnings.warn('Wrong input for parseDate, input size does not match')
 		return None
 	else:
-		return v
+		try:
+			year = int(str[0:4])
+			month = int(str[4:6])
+			date = int(str[6:8])
+			return year, month, date
+		except ValueError:
+			warnings.warn('Wrong input for parseDate, can not convert to int')
+			return None
+	# pass
 
 def isSameMonth(date1, date2):
-	if date1.month != date2.month:
-		return False
-	else:
-		return True		
-
+	for x in range(2):
+		if date1[x] != date2[x]:
+			return False
+	return True
 
 def isSameDate(date1, date2):
-	if date1 != date2:
-		return False
-	else:
-		return True	 
-
-def calAR(start_price, close_price):
-	return (close_price - start_price)/start_price
+	for x in range(3):
+		if date1[x] != date2[x]:
+			return False
+	return True
 
 def getAMRs(month_date, monthly_database, num_month, month_id = -1):
 	# get accumulative last num_month montly return
@@ -108,6 +109,9 @@ def getNextMR(month_date, monthly_database, month_id = -1):
 	next_month_return = monthly_database[next_month_id][2]
 	return [next_month_return]
 
+def calAR(start_price, close_price):
+	return (close_price - start_price)/start_price
+
 def getInputData(daily_database, monthly_database):
 	input_datas = []
 	for month_id, month_data in enumerate(monthly_database):
@@ -121,13 +125,14 @@ def getInputData(daily_database, monthly_database):
 		if adr is None:
 			continue
 		# calculate Jan flag
-		if date.month==1:
+		if date[1]==1:
 			jan = [1]
 		else:
 			jan = [0]
 		nmr = getNextMR(date, monthly_database)
 		if nmr is None:
 			continue
+
 		input_data = amr + adr + jan + nmr
 		input_datas.append(input_data)
 	return input_datas
@@ -138,39 +143,42 @@ def parseDataBase(file_path):
 	one assumption of using this function is that the data lenght is the same
 	for every stock
 	'''
-	data = get_data(file_path)
-	data = data['Sheet1']
+
+	backtest_precentage = 0.1
 	daily_database = []
 	monthly_database = []
-	
-	last_month_date = None
-	last_month_id = -1
-	last_month_value = 0
-	for id, row in enumerate(data):
-		# skip the header
-		if id == 0:
-			continue
-		date = row[0]
-		vclose = float(row[4])
-		vopen = float(row[1])
-		volume = float(row[5])
-		daily_return = (vclose - vopen)/vopen
-		if last_month_date is None:
-			last_month_date = date
-			last_month_value = vclose
-			last_month_id = 0
-		else:
-			if not isSameMonth(date, last_month_date):
-				# new month value is equal to last day closed price
-				# get the new month from last day in the daily database
-				new_month = daily_database[-1]
-				new_month_value = new_month[2] # 2 is the closed value
-				monthly_return = calAR(last_month_value, new_month_value)
-				monthly_database.append( [date, new_month_value, monthly_return] )
+	# total_lines = row_count = sum(1 for line in open(file_path))
+	# backtest_start_index = int(total_lines * backtest_precentage)
+	# print(total_lines, backtest_start_index)
+	with open(file_path, 'rt') as csvfile:
+		reader = csv.DictReader(csvfile, delimiter=',', skipinitialspace=True)
+		# calculate the backtest index
+		# read the dates first
+		last_month_date = None
+		last_month_id = -1
+		last_month_value = 0
+		for id, row in enumerate(reader):
+			date = parseDate(row['Date'])
+			vclose = float(row['Close'])
+			vopen = float(row['Open'])
+			daily_return = (vclose - vopen)/vopen
+			if last_month_date is None:
 				last_month_date = date
-				last_month_id = id
-				last_month_value = new_month_value
-		daily_database.append( [date, vopen, vclose, daily_return] )
+				last_month_value = vclose
+				last_month_id = 0
+			else:
+				if not isSameMonth(date, last_month_date):
+					# new month value is equal to last day closed price
+					# get the new month from last day in the daily database
+					new_month = daily_database[-1]
+					new_month_value = new_month[2] # 2 is the closed value
+					monthly_return = calAR(last_month_value, new_month_value)
+					monthly_database.append( [date, new_month_value, monthly_return] )
+					last_month_date = date
+					last_month_id = id
+					last_month_value = new_month_value
+			daily_database.append( [date, vopen, vclose, daily_return] )
+
 	return daily_database, monthly_database
 
 def writeInputData(file_path, input_data):
@@ -193,11 +201,8 @@ def generateFakeData(input_data):
 	fake_array[:,-2] = input_array[:,-2]
 	return fake_array.tolist()
 
-DATA_VERSION = "0.1.1"
-DATA_ADDRESS = "../data/CSI/"
-WRITE_ADDRESS = "../pdata/"
-
-def generateDataBase(data_address=DATA_ADDRESS, write_address=WRITE_ADDRESS, use_fakedata=False, zscore=True):
+DATA_VERSION = "0.1.0"
+def generateDataBase(data_address="../data", write_address="../pdata/", use_fakedata=True, zscore=True):
 
 	write_address = os.path.abspath(write_address)  # pdata Stands for processed data
 	data_address = os.path.abspath(data_address)
@@ -206,25 +211,28 @@ def generateDataBase(data_address=DATA_ADDRESS, write_address=WRITE_ADDRESS, use
 	if os.path.exists(write_address):
 		shutil.rmtree(write_address)
 	os.makedirs(write_address)
-	
-	all_datas = []
-	count = 0
-	for file in data_files:
-		file_path = os.path.join(data_address, file)
-		[daily_database, monthly_database] = parseDataBase(file_path)
-		input_data = getInputData(daily_database, monthly_database)
-		all_datas.append(input_data)
-		count += 1
-		if count > 10:
-			break
 
-	# normalize the data
-	for data in all_datas:
-		 
+	all_datas = []
+	if use_fakedata:
+		# use first data file as sample data
+		sample_data_path = os.path.join(data_address, data_files[0])
+		[daily_database, monthly_database] = parseDataBase(sample_data_path)
+		sample_data = getInputData(daily_database, monthly_database)
+		# generate 100 fake data
+		for x in range(100):
+			fake_data = generateFakeData(sample_data)
+			all_datas.append(fake_data)
+		print("Generated %d Fake Data which all have size %d"%(len(all_datas),len(fake_data)))
+	else:
+		for file in data_files:
+			file_path = os.path.join(data_address, file)
+			[daily_database, monthly_database] = parseDataBase(file_path)
+			input_data = getInputData(daily_database, monthly_database)
+			all_datas.append(input_data)
+
 	all_datas = numpy.array(all_datas, dtype = numpy.float64)
 	# add another row to the data to store the normalized output
 	all_datas = numpy.append(all_datas, numpy.zeros((all_datas.shape[0],all_datas.shape[1],1)),axis=2)
-
 	# first axis is depth which is each stock
 	# second axis is row which is each month
 	# third axis is col which is every input, last col is label
@@ -256,7 +264,8 @@ def generateDataBase(data_address=DATA_ADDRESS, write_address=WRITE_ADDRESS, use
 
 	# find the median value in the output list and classify them into two class
 	# add three rows to store the normalized stock value, the 
-	all_datas = numpy.append(all_datas, numpy.zeros((all_datas.shape[0],all_datas.shape[1],2)),axis=2) 
+	all_datas = numpy.append(all_datas, numpy.zeros((all_datas.shape[0],all_datas.shape[1],2)),axis=2)
+	# normalize the data 
 	# [... flag, monthly_return, normalized_montly_return, class1, class2]
 	for row in range(all_datas.shape[1]):
 		median = numpy.median(all_datas[:,row,-4])
@@ -286,56 +295,6 @@ def generateDataBase(data_address=DATA_ADDRESS, write_address=WRITE_ADDRESS, use
 
 def main():
 	generateDataBase()
-
-def cal_ar(start_price, close_price):
-	return (close_price - start_price)/start_price
-
-def is_same_month(date1, date2):
-	if date1.month != date2.month:
-		return False
-	else:
-		return True		
-
-def get_monthly_database(db):
-	daily_database = []
-	monthly_database = []
-	for stock in db.stocks:
-		for value in stock.value:
-			# skip the header
-			if id == 0:
-				continue
-			date = v["Date"]
-			vopen = v["Open"]
-			vclose = v["Close"]
-			daily_return = (vclose - vopen)/vopen
-			if last_month_date is None:
-				last_month_date = date
-				last_month_value = vclose
-			else:
-				if not is_same_month(date, last_month_date):
-					# new month value is equal to last day closed price
-					# get the new month from last day in the daily database
-					new_month = daily_database[-1]
-					new_month_value = new_month[2] # 2 is the closed value
-					monthly_return = cal_ar(last_month_value, new_month_value)
-					monthly_database.append( [date, new_month_value, monthly_return] )
-					last_month_date = date
-					last_month_value = new_month_value
-			daily_database.append( [date, vopen, vclose, daily_return] )
-
-def transform(db, dir):
-	"""
-	@brief      transform a database manager object into a momentum database and save it into dir
-	
-	@param      db     The database
-	@param      dir    The directory
-	
-	@return     { description_of_the_return_value }
-	"""
-	stocks = db.get_all_stocks():
-	for stock in stocks:
-		for value in stock.value:
-
 
 if __name__ == '__main__':
 	main()
