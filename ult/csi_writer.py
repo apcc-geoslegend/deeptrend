@@ -30,7 +30,7 @@ def feed_data(db, dir):
 			volume = float(row[5])
 			db.feed_current_stock({'Date':date, 'Open':vopen, 'Close':vclose, 'Volume':volume})
 		count += 1
-		if count > 100:
+		if count > 20:
 			break
 	# db.sort()
 	

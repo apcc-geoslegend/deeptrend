@@ -12,3 +12,6 @@ if __name__ == '__main__':
 
 	l = [date2,date1]
 	print(sorted(l))
+	print(date1)
+	date1.month -= 12
+	print(date1)

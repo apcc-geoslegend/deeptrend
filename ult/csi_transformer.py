@@ -46,7 +46,9 @@ def get_monthly_database(db):
 					# get the new month from last day in the daily database
 					new_month_value = last_day_value
 					monthly_return = cal_ar(last_month_value, new_month_value)
-					monthly_database[stock.name].update({last_day: {"Last":last_month_value, "Current":new_month_value, "Mothly Return":monthly_return}})
+					monthly_database[stock.name].update({last_day: {"Last":last_month_value, 
+																	"Current":new_month_value, 
+																	"Monthly Return":monthly_return}})
 					last_month_date = date
 					last_month_value = new_month_value
 			last_day_value = vclose
@@ -63,22 +65,54 @@ def transform(db, dir):
 	@return     { description_of_the_return_value }
 	"""
 	mdb = get_monthly_database(db)
-	for stock, date in mdb.items():
-		vdate = db.get_all_stock_by_date(date)
+	# find all the end dates in the database
+	all_month_dates = []
+	for stock, value in mdb.items():
+		for date in value:
+			if date not in all_month_dates:
+				all_month_dates.append(date)
+	# find all the meadian in the database
+	medians = {}
+	for date in all_month_dates:
+		# print(date)
+		median = []
+		for stock, value in mdb.items():
+			if date in value:
+				median.append(value[date]["Monthly Return"])
+		median = numpy.array(median)
+		median = numpy.median(median)
+		medians[date] = median
 
-	for stock in stocks:
-		for value in stock.value:
-			pass
+	# calculate the 12 momentum
+	for date in all_month_dates:
+		pass
 
+	# print(all_month_dates)
+
+	# for stock in stocks:
+	# 	for value in stock.value:
+	# 		pass
 
 if __name__ == '__main__':
-	file = open('../pdata/csi.db','rb')
-	database = pickle.load(file)
-	date = datetime.date(2016,10,27)
 
-	monthly_database = get_monthly_database(database)
-	for k,v in monthly_database.items():
-		print(k)
-		for x,y in v.items():
-			print(x,y) 
-		break
+	# test open data base
+	file = open('../pdata/csi.db','rb')
+	db = pickle.load(file)
+	transform(db,[])
+
+
+	# # test get montly database
+	# monthly_database = get_monthly_database(db)
+	# for k,v in monthly_database.items():
+	# 	print(k)
+	# 	for x,y in v.items():
+	# 		print(x,y) 
+	# 	break
+
+
+	# # test get all stock by date function
+	# date = datetime.date(2016,10,5)
+	# xxx = db.get_all_stock_by_date(date)
+	# for a in xxx:
+	# 	print(a)
+	# print(len(xxx))
