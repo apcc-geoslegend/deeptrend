@@ -287,55 +287,5 @@ def generateDataBase(data_address=DATA_ADDRESS, write_address=WRITE_ADDRESS, use
 def main():
 	generateDataBase()
 
-def cal_ar(start_price, close_price):
-	return (close_price - start_price)/start_price
-
-def is_same_month(date1, date2):
-	if date1.month != date2.month:
-		return False
-	else:
-		return True		
-
-def get_monthly_database(db):
-	daily_database = []
-	monthly_database = []
-	for stock in db.stocks:
-		for value in stock.value:
-			# skip the header
-			if id == 0:
-				continue
-			date = v["Date"]
-			vopen = v["Open"]
-			vclose = v["Close"]
-			daily_return = (vclose - vopen)/vopen
-			if last_month_date is None:
-				last_month_date = date
-				last_month_value = vclose
-			else:
-				if not is_same_month(date, last_month_date):
-					# new month value is equal to last day closed price
-					# get the new month from last day in the daily database
-					new_month = daily_database[-1]
-					new_month_value = new_month[2] # 2 is the closed value
-					monthly_return = cal_ar(last_month_value, new_month_value)
-					monthly_database.append( [date, new_month_value, monthly_return] )
-					last_month_date = date
-					last_month_value = new_month_value
-			daily_database.append( [date, vopen, vclose, daily_return] )
-
-def transform(db, dir):
-	"""
-	@brief      transform a database manager object into a momentum database and save it into dir
-	
-	@param      db     The database
-	@param      dir    The directory
-	
-	@return     { description_of_the_return_value }
-	"""
-	stocks = db.get_all_stocks():
-	for stock in stocks:
-		for value in stock.value:
-
-
 if __name__ == '__main__':
 	main()

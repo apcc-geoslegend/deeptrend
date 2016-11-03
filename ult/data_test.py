@@ -1,8 +1,14 @@
-
-def main():
-	v = '10/30/1992'
-	v = v.split('/')
-	print(v)
+import datetime
 
 if __name__ == '__main__':
-	main()
+	date1 = datetime.date(1992,10,30)
+	date2 = datetime.date(1992,10,29)
+	
+	if date1 == date2:
+		print("Same")
+
+	if date1 in [date2]:
+		print("In")
+
+	l = [date2,date1]
+	print(sorted(l))
