@@ -215,11 +215,16 @@ def generateDataBase(data_address=DATA_ADDRESS, write_address=WRITE_ADDRESS, use
 		input_data = getInputData(daily_database, monthly_database)
 		all_datas.append(input_data)
 		count += 1
-		if count > 10:
-			break
+		# if count > 100:
+		# 	break
 
-	# normalize the data
+	useful_data = []
+	# find the same length data
 	for data in all_datas:
+		if len(data) == 107:
+			useful_data.append(data)
+
+	all_datas = useful_data
 		 
 	all_datas = numpy.array(all_datas, dtype = numpy.float64)
 	# add another row to the data to store the normalized output

@@ -15,16 +15,20 @@ def data_type():
   return tf.float32
 
 def main(_):
-  max_train_steps = 1000
+  epoch = 20
+  batch_size = 100
   # mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
   db = StockData()
-  db.readDataSet("../pdata/", classification = True, test_precentage = 0.4, backtest_precentage = 0.03)
+  db.readDataSet("../pdata/", classification = True, test_precentage = 0.3, backtest_precentage = 0.1)
 
   input_size = db.getInputSize()
   output_size = db.getOutputSize()
+  data_size = db.getTrainDataSize()
+
+  max_train_steps = int(data_size/batch_size*epoch)
 
   ####
-  layers = [100,100,100]
+  layers = [100,100,100,100,100,100,100]
   weights = []
   bias = []
 
@@ -65,18 +69,19 @@ def main(_):
   regularizers = tf.reduce_mean([tf.nn.l2_loss(w) for w in weights] + [tf.nn.l2_loss(b) for b in bias])
   loss += 5e-4 * regularizers
 
-  learning_rate = tf.train.exponential_decay(
-      0.01,                # Base learning rate.
-      global_step,         # Current index into the dataset.
-      max_train_steps,     # Decay step.
-      0.95,                # Decay rate.
-      staircase=True)
+  # learning_rate = tf.train.exponential_decay(
+  #     0.01,                # Base learning rate.
+  #     global_step,         # Current index into the dataset.
+  #     max_train_steps,     # Decay step.
+  #     0.95,                # Decay rate.
+  #     staircase=True)
+  learning_rate = tf.constant(0.1)
 
-  # train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
+  train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
   # train_step = tf.train.AdadeltaOptimizer(learning_rate, 0.9).minimize(loss,global_step=global_step)
   # train_step = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
   # train_step = tf.train.AdagradDAOptimizer(learning_rate, global_step=global_step).minimize(loss)
-  train_step = tf.train.MomentumOptimizer(learning_rate, 0.9).minimize(loss, global_step=global_step)
+  # train_step = tf.train.MomentumOptimizer(learning_rate, 0.9).minimize(loss, global_step=global_step)
   # train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss,global_step=global_step)
   # train_step = tf.train.FtrlOptimizer(learning_rate).minimize(loss.global_step=global_step)
   # train_step = tf.train.RMSPropOptimizer(learning_rate).minimize(loss,global_step=global_step)
@@ -86,7 +91,7 @@ def main(_):
   # Train
   tf.initialize_all_variables().run()
   for _ in xrange(max_train_steps):
-    batch_xs, batch_ys = db.nextBatch(100)
+    batch_xs, batch_ys = db.nextBatch(batch_size)
     oput,lr = sess.run([train_step,learning_rate], feed_dict={x: batch_xs, y_: batch_ys})
     # print("learning rate is",lr)
 
@@ -102,7 +107,7 @@ def main(_):
     output = sess.run(evaluation, feed_dict={x: test_input, y_:test_label})
     print("The mean L1 loss of test data is",output)
   backtest_data = db.getBacktestData()
-  num_stock_to_buy = 15
+  num_stock_to_buy = 30
 
   def backTest():
     acc_return = 0
