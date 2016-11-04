@@ -21,26 +21,29 @@ class StockData:
 		self.test_precentage = 0
 		self.classification = False
 
-	def getInputSize(self):
+	def get_input_size(self):
 		if self.found_data == True:
 			return len(self.x_ids)
 	
-	def getOutputSize(self):
+	def get_output_size(self):
 		if self.found_data == True:
 			if type(self.y_ids) == type(int(0)):
 				return 1
 			else:
 				return len(self.y_ids)
 
-	def getTrainDataSize(self):
+	def get_stock_num(self):
+		return self.backtest_data.shape[0]
+
+	def get_train_data_size(self):
 		if self.found_data == True:
 			return self.train_data.shape[0]
 
-	def getTestDataSize(self):
+	def get_test_dataSize(self):
 		if self.found_data == True:
 			return self.test_data.shape[0]
 
-	def setClassification(self, classification):
+	def set_classification(self, classification):
 		self.classification = classification
 		if classification:
 			# it's a classification lable
@@ -51,7 +54,7 @@ class StockData:
 			self.x_ids = [x for x in range(self.train_data.shape[1] - 4)]
 			self.y_ids = [self.train_data.shape[1]-3]
 
-	def getData(self, file_path):
+	def get_data(self, file_path):
 		file_path = os.path.abspath(file_path)
 		with open(file_path, 'rt') as csvfile:
 			reader = csv.reader(csvfile, delimiter=',', skipinitialspace=True)
@@ -61,10 +64,10 @@ class StockData:
 			# data_array = numpy.array(data)
 			return data
 
-	def readDataSet(self, data_dir, classification = True, test_precentage = 0.1, backtest_precentage = 0.1):
+	def read_dataset(self, data_dir, classification = True, test_precentage = 0.1, backtest_precentage = 0.1):
 		file_path = os.path.join(data_dir, ms.DATA_VERSION+".db")
 		if not os.path.exists(file_path):
-			ms.generateDataBase()
+			ms.generate_database()
 
 		with open(file_path,'rb') as bfile:
 			read_datas = numpy.load(bfile)
@@ -99,10 +102,10 @@ class StockData:
 		self.backtest_data = backtest_data
 
 		self.train_size = self.train_data.shape[0]
-		self.setClassification(classification)
+		self.set_classification(classification)
 		self.found_data = True
 
-	def nextBatch(self, num):
+	def next_batch(self, num):
 		if self.found_data == True:
 			start_id = self.current_id
 			end_id = start_id + num
@@ -116,29 +119,29 @@ class StockData:
 			label = self.train_data[start_id:end_id, self.y_ids]
 			return input, label
 		else:
-			print("Can't find the data, You need to Read Data First! use readDataSet()")
+			print("Can't find the data, You need to Read Data First! use read_dataset()")
 
-	def getTestData(self):
+	def get_test_data(self):
 		return self.test_data[:,self.x_ids], self.test_data[:,self.y_ids]
 
-	def getBacktestData(self):
+	def get_backtest_data(self):
 		return self.backtest_data
 
-	def parseInputOutput(self,data):
+	def parse_input_output(self,data):
 		return data[:,self.x_ids], data[:,self.y_ids]
 
 if __name__ == '__main__':
 	# usecase example
 	data_dir = "../pdata/"
 	database = StockData()
-	database.readDataSet(data_dir)
-	database.setClassification(True)
+	database.read_dataset(data_dir)
+	database.set_classification(True)
 	for i in range(1000):
-		train_batch, label_batch = database.nextBatch(100)
+		train_batch, label_batch = database.next_batch(100)
 		assert train_batch.shape[0]==100
 		assert label_batch.shape[0]==100
 
-	test_data, test_lable = database.getTestData()
+	test_data, test_lable = database.get_test_data()
 	print(test_data.shape)
 	print(test_lable.shape)
 	assert test_data.shape[0]!=0

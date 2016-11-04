@@ -9,6 +9,14 @@ import pickle
 # 		self.db = db
 
 def feed_data(db, dir):
+	"""
+	@brief      feed the data to the database
+	
+	@param      db    The database
+	@param      dir   The directory of the saved database
+	
+	@return     nothing
+	"""
 	dir = os.path.abspath(dir)
 	data_files = os.listdir(dir)
 	if len(data_files) == 0:
@@ -18,7 +26,7 @@ def feed_data(db, dir):
 	for file in data_files:
 		file_path = os.path.join(dir, file)
 		stock_name = file[0:file.find('.')]
-		db.create_new_stock(stock_name, 0)
+		db.create_new_stock(stock_name)
 		data = get_data(file_path)
 		data = data['Sheet1']
 		for id, row in enumerate(data):
@@ -28,11 +36,11 @@ def feed_data(db, dir):
 			vclose = float(row[4])
 			vopen = float(row[1])
 			volume = float(row[5])
-			db.feed_current_stock({'Date':date, 'Open':vopen, 'Close':vclose, 'Volume':volume})
+			db.feed_current_stock(date, {'Open':vopen, 'Close':vclose, 'Volume':volume})
 		count += 1
 		if count > 20:
 			break
-	# db.sort()
+	db.sort()
 	
 if __name__ == '__main__':
 	db = DatabaseManager()

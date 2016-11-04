@@ -2,6 +2,7 @@ import csv
 import os.path
 import copy
 import collections
+from operator import itemgetter
 
 # class DailyValue:
 #   def __init__(self,value):
@@ -19,90 +20,97 @@ import collections
 
 #       self.value = value["Date"]
 
-class Stock:
-    def __init__(self, stock_name, stock_id, db_id):
-        self.name = stock_name
-        self.id = stock_id
-        self.db_id = db_id
-        self.datas = []
-        self.values = collections.OrderedDict()
+# class Stock:
+#     def __init__(self, stock_name, stock_id, db_id):
+#         self.name = stock_name
+#         self.id = stock_id
+#         self.db_id = db_id
+#         self.datas = []
+#         self.values = collections.OrderedDict()
 
-    def add_value(self, value):
-        if "Date" not in value:
-            print("stock.add_value(): Need to at least have date in the value")
-            return None
-        date = value["Date"]
-        self.values.update( {date: {x:value[x] for x in value if x is not "Date"}})
+#     def add_value(self, value):
+#         if "Date" not in value:
+#             print("stock.add_value(): Need to at least have date in the value")
+#             return None
+#         date = value["Date"]
+#         self.values.update( {date: {x:value[x] for x in value if x is not "Date"}})
 
-    def get_all_dates(self):
-        dates = [] 
-        for date in values:
-            dates.append(date)
-        return dates
+#     def get_all_dates(self):
+#         dates = [] 
+#         for date in values:
+#             dates.append(date)
+#         return dates
 
 class DatabaseManager:
     
     def __init__(self):
         self.current_stock = None
-        self.stocks = []
+        self.stocks = collections.OrderedDict()
         self.dates = []
 
-    def create_new_stock(self, stock_name, stock_id):
+    def create_new_stock(self, stock_name):
         print("Added new stock",stock_name)
-        st = Stock(stock_name, stock_id, len(self.stocks))
-        self.stocks.append(st)
-        self.current_stock = self.stocks[-1]
+        # st = Stock(stock_name, stock_id, len(self.stocks))
+        st = {stock_name:collections.OrderedDict()}
+        self.stocks.update(st)
+        self.current_stock = self.stocks[stock_name]
 
-    def feed_current_stock(self, value):
+    def feed_current_stock(self, date, value):
         if self.current_stock is None:
             print("Please create stock first")
             return None
-        self.current_stock.add_value(value)
-
-        date = value["Date"]
-
-        if value["Date"] not in self.dates:
-            self.dates.append(date)
+        self.current_stock.update({date:value})
 
     @staticmethod
     def is_same_month(date1, date2):
-        if date1.month != date2.month:
-            return False
+        if date1.month == date2.month and date1.year == date2.year:
+            return True
         else:
-            return True 
+            return False
+
     @staticmethod
-    def cal_ar(start_price, close_price):
-        return (close_price - start_price)/start_price
+    def is_same_date(date1,date2):
+        if date1 == date2:
+            return True
+        else:
+            return False
 
     def sort(self):
         for stock in self.stocks:
-            stock.values = collections.OrderedDict(sorted(stock.values.items(), key=lambda t: t[0]))
+            self.stocks[stock] = collections.OrderedDict(sorted(self.stocks[stock].items(), key=itemgetter(0)))
 
-    def get_montly_database(self):
-        monthly_database = []
-        for stock in self.stocks:
-            lase_day_value = None
-            db = []
-            for value in stock.value:
-                date = value["Date"]
-                vopen = value["Open"]
-                vclose = value["Close"]
-                daily_return = (vclose - vopen)/vopen
-                if last_month_date is None:
-                    last_month_date = date
-                    last_month_value = vclose
-                else:
-                    if not is_same_month(date, last_month_date):
-                        # new month value is equal to last day closed price
-                        # get the new month from last day in the daily database
-                        new_month = daily_database[-1]
-                        new_month_value = new_month[2] # 2 is the closed value
-                        monthly_return = cal_ar(last_month_value, new_month_value)
-                        db.append( {"Date": date, "Close": vclose, "Monthly Return": monthly_return})
-                        last_month_date = date
-                        last_month_value = new_month_value
-                lase_day_value = vclose
-            monthly_database.append(db)
+    def get_last_N_days_data(self,stock,date,N):
+        if stock not in self.stocks:
+            return None
+        
+        values = self.stocks[stock]
+        if date not in values:
+            return None
+
+        id = values.keys().index(date)
+        if (id - N)<0: # not enough data
+            return None
+
+        all_datas = collections.OrderedDict()
+        for xdate,value in values.items()[id-N:id]:
+            all_datas.update({xdate:value})
+        all_datas = collections.OrderedDict(sorted(all_datas.items(), key=itemgetter(0)))
+        return all_datas
+
+    def get_current_month_all_data(self,stock,date):
+        if stock not in self.stocks:
+            return None
+        
+        values = self.stocks[stock]
+        if date not in values:
+            return None
+
+        all_datas = collections.OrderedDict()
+        for xdate,value in values.items():
+            if self.is_same_month(xdate, date):
+                all_datas.update({xdate:value})
+        all_datas = collections.OrderedDict(sorted(all_datas.items(), key=itemgetter(0)))
+        return all_datas
 
     def get_all_dates(self):
         self.dates.sort()
@@ -113,13 +121,15 @@ class DatabaseManager:
         for stock in self.stocks:
             if date in stock.values:
                 value = copy.copy(stock.values[date])
-                name = {"Stock Name": stock.name, "Stock ID": stock.id, "DB ID":  stock.db_id}
+                name = {"Name": stock}
                 value.update(name)
                 values.append(value)
         return values
 
-    def feed_stock(self, stock_name, value, stock_id=-1):
-        pass
+    def feed_stock(self, stock_name, date, value):
+        if stock_name not in self.stocks:
+            self.stocks.update({stock_name:collections.OrderedDict()})
+        self.stocks[stock_name].update({date: value})
 
 if __name__ == '__main__':
     pass

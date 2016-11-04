@@ -10,9 +10,9 @@ import copy
 import matplotlib.pyplot as plt
 import random
 
-def parseDate(str):
+def parse_data(str):
 	if len(str)!=8:
-		warnings.warn('Wrong input for parseDate, input size does not match')
+		warnings.warn('Wrong input for parse_data, input size does not match')
 		return None
 	else:
 		try:
@@ -21,28 +21,28 @@ def parseDate(str):
 			date = int(str[6:8])
 			return year, month, date
 		except ValueError:
-			warnings.warn('Wrong input for parseDate, can not convert to int')
+			warnings.warn('Wrong input for parse_data, can not convert to int')
 			return None
 	# pass
 
-def isSameMonth(date1, date2):
+def is_same_month(date1, date2):
 	for x in range(2):
 		if date1[x] != date2[x]:
 			return False
 	return True
 
-def isSameDate(date1, date2):
+def is_same_date(date1, date2):
 	for x in range(3):
 		if date1[x] != date2[x]:
 			return False
 	return True
 
-def getAMRs(month_date, monthly_database, num_month, month_id = -1):
+def get_amrs(month_date, monthly_database, num_month, month_id = -1):
 	# get accumulative last num_month montly return
 	current_month_id = -1
 	if month_id < 0:
 		for id, data in enumerate(monthly_database):
-			if isSameMonth(month_date, data[0]):
+			if is_same_month(month_date, data[0]):
 				current_month_id = id
 				break
 		if current_month_id == -1:
@@ -62,15 +62,15 @@ def getAMRs(month_date, monthly_database, num_month, month_id = -1):
 	for x in range(num_month):
 		eval_month_id = start_month_id + x
 		eval_price = monthly_database[eval_month_id][1]
-		amr.append(calAR(base_price, eval_price))
+		amr.append(cal_ar(base_price, eval_price))
 		# print(monthly_database[eval_month_id][0])
 	return amr
 
-def getADRs(day, daily_database, num_day):
+def get_adrs(day, daily_database, num_day):
 	# get accumulative last num_day daily retrun
 	current_day_id = -1
 	for id, data in enumerate(daily_database):
-		if isSameDate(day, data[0]):
+		if is_same_date(day, data[0]):
 			current_day_id = id
 			break
 	
@@ -88,14 +88,14 @@ def getADRs(day, daily_database, num_day):
 	for x in range(num_day):
 		eval_day_id = start_day_id + x
 		eval_price = daily_database[eval_day_id][2]
-		adr.append( calAR(base_price, eval_price))
+		adr.append( cal_ar(base_price, eval_price))
 	return adr
 
-def getNextMR(month_date, monthly_database, month_id = -1):
+def get_next_mr(month_date, monthly_database, month_id = -1):
 	# get next month monthly return
 	if month_id < 0:
 		for id, data in enumerate(monthly_database):
-			if isSameMonth(month_date, data[0]):
+			if is_same_month(month_date, data[0]):
 				current_month_id = id
 				break
 	else:
@@ -109,19 +109,19 @@ def getNextMR(month_date, monthly_database, month_id = -1):
 	next_month_return = monthly_database[next_month_id][2]
 	return [next_month_return]
 
-def calAR(start_price, close_price):
+def cal_ar(start_price, close_price):
 	return (close_price - start_price)/start_price
 
-def getInputData(daily_database, monthly_database):
+def get_input_data(daily_database, monthly_database):
 	input_datas = []
 	for month_id, month_data in enumerate(monthly_database):
 		date = month_data[0]
 		# calculate AMRs
-		amr = getAMRs(date, monthly_database, 12, month_id)
+		amr = get_amrs(date, monthly_database, 12, month_id)
 		if amr is None:
 			continue
 		# calculate ADRs
-		adr = getADRs(date, daily_database, 20)
+		adr = get_adrs(date, daily_database, 20)
 		if adr is None:
 			continue
 		# calculate Jan flag
@@ -129,7 +129,7 @@ def getInputData(daily_database, monthly_database):
 			jan = [1]
 		else:
 			jan = [0]
-		nmr = getNextMR(date, monthly_database)
+		nmr = get_next_mr(date, monthly_database)
 		if nmr is None:
 			continue
 
@@ -137,7 +137,7 @@ def getInputData(daily_database, monthly_database):
 		input_datas.append(input_data)
 	return input_datas
 
-def parseDataBase(file_path):
+def parse_database(file_path):
 	'''
 	parse a signel file into daily database and monthly database
 	one assumption of using this function is that the data lenght is the same
@@ -158,7 +158,7 @@ def parseDataBase(file_path):
 		last_month_id = -1
 		last_month_value = 0
 		for id, row in enumerate(reader):
-			date = parseDate(row['Date'])
+			date = parse_data(row['Date'])
 			vclose = float(row['Close'])
 			vopen = float(row['Open'])
 			daily_return = (vclose - vopen)/vopen
@@ -167,12 +167,12 @@ def parseDataBase(file_path):
 				last_month_value = vclose
 				last_month_id = 0
 			else:
-				if not isSameMonth(date, last_month_date):
+				if not is_same_month(date, last_month_date):
 					# new month value is equal to last day closed price
 					# get the new month from last day in the daily database
 					new_month = daily_database[-1]
 					new_month_value = new_month[2] # 2 is the closed value
-					monthly_return = calAR(last_month_value, new_month_value)
+					monthly_return = cal_ar(last_month_value, new_month_value)
 					monthly_database.append( [date, new_month_value, monthly_return] )
 					last_month_date = date
 					last_month_id = id
@@ -181,13 +181,13 @@ def parseDataBase(file_path):
 
 	return daily_database, monthly_database
 
-def writeInputData(file_path, input_data):
+def write_input_data(file_path, input_data):
 	with open(file_path, 'wt') as csvfile:
 		writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_NONE)
 		for data in input_data:
 			writer.writerow(["% .4f"%x for x in data])
 
-def generateFakeData(input_data):
+def generate_fake_data(input_data):
 	input_array = numpy.array(input_data)
 	std = numpy.std(input_array, axis=0)
 	mu = numpy.std(input_array, axis=0)
@@ -202,7 +202,7 @@ def generateFakeData(input_data):
 	return fake_array.tolist()
 
 DATA_VERSION = "0.1.0"
-def generateDataBase(data_address="../data", write_address="../pdata/", use_fakedata=True, zscore=True):
+def generate_database(data_address="../data", write_address="../pdata/", use_fakedata=True, zscore=True):
 
 	write_address = os.path.abspath(write_address)  # pdata Stands for processed data
 	data_address = os.path.abspath(data_address)
@@ -216,18 +216,18 @@ def generateDataBase(data_address="../data", write_address="../pdata/", use_fake
 	if use_fakedata:
 		# use first data file as sample data
 		sample_data_path = os.path.join(data_address, data_files[0])
-		[daily_database, monthly_database] = parseDataBase(sample_data_path)
-		sample_data = getInputData(daily_database, monthly_database)
+		[daily_database, monthly_database] = parse_database(sample_data_path)
+		sample_data = get_input_data(daily_database, monthly_database)
 		# generate 100 fake data
 		for x in range(100):
-			fake_data = generateFakeData(sample_data)
+			fake_data = generate_fake_data(sample_data)
 			all_datas.append(fake_data)
 		print("Generated %d Fake Data which all have size %d"%(len(all_datas),len(fake_data)))
 	else:
 		for file in data_files:
 			file_path = os.path.join(data_address, file)
-			[daily_database, monthly_database] = parseDataBase(file_path)
-			input_data = getInputData(daily_database, monthly_database)
+			[daily_database, monthly_database] = parse_database(file_path)
+			input_data = get_input_data(daily_database, monthly_database)
 			all_datas.append(input_data)
 
 	all_datas = numpy.array(all_datas, dtype = numpy.float64)
@@ -291,10 +291,10 @@ def generateDataBase(data_address="../data", write_address="../pdata/", use_fake
 	file_name = "sample.csv"
 	write_path = os.path.join(write_address, file_name)
 	write_data = all_datas[0,:,:]
-	writeInputData(write_path, all_datas[0,:,:])
+	write_input_data(write_path, all_datas[0,:,:])
 
 def main():
-	generateDataBase()
+	generate_database()
 
 if __name__ == '__main__':
 	main()
