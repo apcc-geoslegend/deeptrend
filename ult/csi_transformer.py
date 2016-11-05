@@ -92,60 +92,40 @@ def transform(db, dir):
 	"""
 
 	mdb = get_monthly_database(db)
-	# find all the end dates in the database
-	all_month_dates = []
-	for stock, value in mdb.items():
-		for date in value:
-			if date not in all_month_dates:
-				all_month_dates.append(date)
-	# find all the meadian in the database
-	medians = {}
-	for date in all_month_dates:
-		# print(date)
-		median = []
-		for stock, value in mdb.items():
-			if date in value:
-				median.append(value[date]["Monthly Return"])
-		median = numpy.array(median)
-		median = numpy.median(median)
-		medians[date] = median
 
-	# amrs contains { stock_name: {monthly_date:[12 accumulative monthly return] } }
-	amrs = {}
+	# idb contains { stock_name: {monthly_date: {"AMR:[12 accumulative monthly return], "ADR":[20 days dialy return]} } }
+	idb = {}
 	# calculate the 12 month momentum
-	mm_range = 12
-	all_month_dates.sort()
+	monthly_return_range = 12
 	for stock, value in mdb.items(): # stock is the stock.name, value should be the dict of {date:value}
 		# we need at least two extra month to process
-		if len(value) < mm_range + 2:
+		if len(value) < monthly_return_range + 2:
 			#if there is not enough data to process
 			continue
-		if stock not in amrs:
-			amrs.update({stock:collections.OrderedDict()})
+		if stock not in idb:
+			idb.update({stock:collections.OrderedDict()})
 		# start with 1 because we need t - 13
 		# finished with  - mm_rage -1 because we need next month value for monthly return
-		for sid in range(1, len(value) - mm_range - 1):
+		for sid in range(1, len(value) - monthly_return_range - 1):
 			base_month = value.items()[sid - 1][0]
 			base_month_value = value[base_month]["Current"]
 			# calculate the acumulated monthly return
 			amr = []
-			for cid in range(mm_range):
+			for cid in range(monthly_return_range):
 				current_month = value.items()[sid + cid][0]
 				current_month_value = value[current_month]["Current"]
 				mr = cal_ar(base_month_value, current_month_value)
 				amr.append(mr)
-			amrs[stock].update({current_month:amr})
-		if not amrs[stock]:
+			if len(amr)!= monthly_return_range:
+				print("AMR length not match, Should not happen")
+			idb[stock].update({current_month:{"AMR":amr}})
+		if not idb[stock]:
 			print("THIS SHOULD NOT HAPPEN: No value found for this stock", stock, len(value))
 
-
-	# for every amrs month calculate it's 20 days return
-	# amrs contains { stock_name: {monthly_date:[12 accumulative monthly return] } }
+	# for every idb month calculate it's 20 days return
+	# idb contains { stock_name: {monthly_date:[12 accumulative monthly return] } }
 	daily_return_length = 20
-	adrs = {}
-	for stock, value in amrs.items():
-		if stock not in adrs: 
-			adrs.update({stock:collections.OrderedDict()})
+	for stock, value in idb.items():
 		for month, amr in value.items():
 			data = db.get_last_N_days_data(stock, month, daily_return_length+1)
 			if data is None:
@@ -164,17 +144,72 @@ def transform(db, dir):
 				current_value = xvalue["Close"]
 				dr = cal_ar(start_value, current_value)
 				adr.append(dr)
-			adrs[stock].update({month:adr})
+			if len(adr) != daily_return_length:
+				print("ADR length not match Should not happen")
+				idb[stock][month] = {}
+			idb[stock][month].update({"ADR":adr})
 
-	for stock, value in adrs.items():
-		# print(value)
+	for stock, value in idb.items():
 		for date, xvalue in value.items():
-			print(date)
-			for yvalue in xvalue:
-				print(yvalue)
-		break
+			if date.month == 1:
+				idb[stock][date]["Jan"] = 1
 
-	# for stock, value in amrs.items():
+	# find all the end dates in the database
+	all_month_dates = []
+	all_stock_name = []
+	for stock, value in idb.items():
+		if stock not in all_stock_name:
+			all_stock_name.append(stock)
+		for date in value:
+			if date not in all_month_dates:
+				all_month_dates.append(date)
+
+	# find all the meadian in the database
+	medians = {}
+	for date in all_month_dates:
+		# print(date)
+		median = []
+		for stock, value in mdb.items():
+			if date in value:
+				median.append(value[date]["Monthly Return"])
+		median = numpy.array(median)
+		median = numpy.median(median)
+		medians[date] = median
+
+	# zero score normalization
+	# calculate mean
+	all_means = {}
+	odb = {}
+	for date in all_month_dates:
+		count = 0
+		# row is stock, col is value
+		all_value = None
+		astocks = []
+		for stock in idb:
+			if date in idb[stock]:
+				astocks.append(astocks)
+				value = numpy.array(idb[stock][date]["AMR"] + idb[stock][date]["ADR"])
+				if all_value is None:
+					all_value = value
+				else:
+					all_value = numpy.vstack( (all_value, value))
+				count += 1
+		if all_value is not None:
+			print(all_value.shape)
+		# z-score
+		for id, col in enumerate(all_value.T):
+			mu = numpy.mean(col)
+			sigma = numpy.std(col)
+			all_value[:,id] = (col - mu)/sigma
+		
+		odb.update({date:all_value})
+		# if count > 0:
+		# 	asum = numpy.divide(asum,count)
+		# 	all_means.update({date: asum})
+		# else:
+		# 	print(stock,date)
+	
+	# for stock, value in idb.items():
 		
 	# for date in all_month_dates:
 	# 	if date.month - 12
