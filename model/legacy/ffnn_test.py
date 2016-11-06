@@ -83,7 +83,7 @@ def main(_):
   # add regularizer
   regularizers = tf.reduce_mean([tf.nn.l2_loss(w) for w in weights] + [tf.nn.l2_loss(b) for b in bias])
   loss += regularizers_weights * regularizers
-
+  
   if lr_decay:
     learning_rate = tf.train.exponential_decay(
         start_learning_rate,            # Base learning rate.
