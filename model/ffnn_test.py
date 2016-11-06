@@ -5,7 +5,8 @@ import argparse
 import sys
 import os
 sys.path.insert(0, os.path.abspath(".."))
-from ult.stock_data import StockData
+# from ult.stock_data import StockData
+from ult.momentum_reader import MomentumReader
 import tensorflow as tf
 import numpy
 import time
@@ -27,12 +28,13 @@ def main(_):
   lr_decay = False
   ##
   # mnist = input_data.read_data_sets(FLAGS.data_dir, one_hot=True)
-  db = StockData()
-  db.read_dataset("../pdata/", classification = True, test_precentage = 0.3, backtest_precentage = 0.12)
+  db = MomentumReader("../pdata/")
+  # db.read_dataset("../pdata/", classification = True, test_precentage = 0.3, backtest_precentage = 0.12)
 
   input_size = db.get_input_size()
   output_size = db.get_output_size()
   data_size = db.get_train_data_size()
+  print("Input size is %s, Output size is %s, Trainning Data Size is %s"%(input_size,output_size,data_size))
   # print(data_size)
 
   max_train_steps = int(data_size/batch_size*epoch)
@@ -125,26 +127,28 @@ def main(_):
     evaluation = tf.reduce_mean(tf.abs(y - y_))
     output = sess.run(evaluation, feed_dict={x: test_input, y_:test_label})
     print("The mean L1 loss of test data is",output)
-  backtest_data = db.get_backtest_data()
-
-  num_stock_to_buy = int(buying_precentage*backtest_data.shape[0])
+  backtest_input, backtest_output, backtest_value = db.get_backtest_data()
 
   def back_test():
     acc_return = 0
-    for row in range(backtest_data.shape[1]):
-      input = backtest_data[:,row, db.x_ids].reshape(backtest_data.shape[0], len(db.x_ids))
+    for date in range(len(backtest_input)):
+      input = backtest_input[date]
       output = sess.run(y, feed_dict={x:input})
+      value = backtest_value[date]
+      num_stock_to_buy = int(buying_precentage*len(input))
+      if num_stock_to_buy < 1:
+        num_stock_to_buy = 1
       if db.classification:
         class1 = output[:,0]
         # argsort the class1
         sort_ids = numpy.argsort(class1)
         # -20: is the last 20 row in sorted id
         # col -4 is the next month return
-        acc_return += numpy.sum(backtest_data[sort_ids[-num_stock_to_buy:],row,-4])
+        acc_return += numpy.sum(value[sort_ids[-num_stock_to_buy:]])/num_stock_to_buy
       else:
         sort_ids = numpy.argsort(output)
-        acc_return += numpy.sum(backtest_data[sort_ids[0:num_stock_to_buy], row, -4])
-      print("Accumulated return at month %d is % 3.3f%%"%(row, acc_return))
+        acc_return += numpy.sum(value[sort_ids[0:num_stock_to_buy]])
+      print("Accumulated return at month %d is % 3.3f%%"%(date, acc_return))
     # print(output)
     # print(backtest_data[:,row,db.y_ids])
     return acc_return

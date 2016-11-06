@@ -9,331 +9,267 @@ import numpy
 import copy
 import matplotlib.pyplot as plt
 import random
-from pyexcel_xls import get_data
+
 import json
-
-def parse_date(str):
-	v = str.split('/')
-	if len(v)!=3:
-		warnings.warn('Wrong input for parse_date, input size does not match')
-		return None
-	else:
-		return v
-
-def is_same_month(date1, date2):
-	if date1.month != date2.month:
-		return False
-	else:
-		return True
-
-
-def is_same_date(date1, date2):
-	if date1 != date2:
-		return False
-	else:
-		return True	 
+import cPickle as pickle
+import datetime
+from collections import OrderedDict
 
 def cal_ar(start_price, close_price):
-	return (close_price - start_price)/start_price
+    """
+    @brief      calculate the acumulative montly return
 
-def get_amrs(month_date, monthly_database, num_month, month_id = -1):
-	# get accumulative last num_month montly return
-	current_month_id = -1
-	if month_id < 0:
-		for id, data in enumerate(monthly_database):
-			if is_same_month(month_date, data[0]):
-				current_month_id = id
-				break
-		if current_month_id == -1:
-			print("Can't find this month in database, check if you are passing the right database")
-	else:
-		current_month_id = month_id
+    @param      start_price  The start price
+    @param      close_price  The close price
 
-	start_month_id = current_month_id - num_month # start month is the month you track back
-	base_month_id = start_month_id - 1 # base month id is the last month before we start month
-	if base_month_id < 0:
-		# if we don't have enough month data to trace back return None
-		return None
+    @return     monthly return
+    """
+    return (close_price - start_price)/start_price
 
-	base_price = monthly_database[base_month_id][1] # 1 is the closed value in month database
-	# print("Current month", month_date)
-	amr = []
-	for x in range(num_month):
-		eval_month_id = start_month_id + x
-		eval_price = monthly_database[eval_month_id][1]
-		amr.append(cal_ar(base_price, eval_price))
-		# print(monthly_database[eval_month_id][0])
-	return amr
+def is_same_month(date1, date2):
+    """
+    @brief      Determines if same month.
 
-def get_adrs(day, daily_database, num_day):
-	# get accumulative last num_day daily retrun
-	current_day_id = -1
-	for id, data in enumerate(daily_database):
-		if is_same_date(day, data[0]):
-			current_day_id = id
-			break
-	
-	if current_day_id == -1:
-		print("Can't find this day in database, check if you are passing the right database")
-		return None
+    @param      date1  The date 1
+    @param      date2  The date 2
 
-	start_day_id = current_day_id - num_day
-	base_day_id = start_day_id - 1
-	if base_day_id < 0:
-		return None
+    @return     True if same month, False otherwise.
+    """
+    if date1.month == date2.month and date1.year == date2.year:
+        return True
+    else:
+        return False
 
-	base_price = daily_database[base_day_id][2] # 2 is the closed value
-	adr = []
-	for x in range(num_day):
-		eval_day_id = start_day_id + x
-		eval_price = daily_database[eval_day_id][2]
-		adr.append( cal_ar(base_price, eval_price))
-	return adr
+def get_monthly_database(db):
+    """
+    @brief      Gets the monthly database.
 
-def get_next_mr(month_date, monthly_database, month_id = -1):
-	# get next month monthly return
-	if month_id < 0:
-		for id, data in enumerate(monthly_database):
-			if is_same_month(month_date, data[0]):
-				current_month_id = id
-				break
-	else:
-		current_month_id = month_id
+    @param      db    The database
 
-	# if it's the last month, we don't have the data
-	if current_month_id == len(monthly_database)-1:
-		return None
+    @return     The monthly database.
+    """
+    """
+    The way it finds the next month is ex:
+    2006,1,30 Closed = 200
+    2006,2,1 Closed = 100
+    Once the month changed to a new one, add the last day into a new month
+    {(2006,1,30),"Closed":200}
+    """
+    # monthly database structs { Stock Name: {Montly Date: {Last Month Value, Current Month Value, Monthly Return} } }
+    monthly_database = OrderedDict()
+    for stock, stock_value in db.stocks.items():
+        last_day = None
+        last_day_value = None
+        last_month_date = None
+        last_month_value = None
+        for date, value in stock_value.items():
+            vclose = value["Close"]
+            if stock not in monthly_database:
+                monthly_database.update({stock: OrderedDict()})
+            if last_month_date is None:
+                last_month_date = date
+                last_month_value = vclose
+            else:
+                if not is_same_month(date, last_month_date):
+                    # new month value is equal to last day closed price
+                    # get the new month from last day in the daily database
+                    new_month_value = last_day_value
+                    monthly_return = cal_ar(last_month_value, new_month_value)
+                    monthly_database[stock].update({last_day: {"Last":last_month_value,
+                                                                "Current":new_month_value,
+                                                                "Monthly Return":monthly_return}})
+                    last_month_date = date
+                    last_month_value = new_month_value
+            last_day_value = vclose
+            last_day = date
+    return monthly_database
 
-	next_month_id = current_month_id + 1
-	next_month_return = monthly_database[next_month_id][2]
-	return [next_month_return]
+def transform(db):
+    """
+    @brief      transform a database manager object into a momentum database and
+                save it into dir
 
-def get_input_data(daily_database, monthly_database):
-	input_datas = []
-	for month_id, month_data in enumerate(monthly_database):
-		date = month_data[0]
-		# calculate AMRs
-		amr = get_amrs(date, monthly_database, 12, month_id)
-		if amr is None:
-			continue
-		# calculate ADRs
-		adr = get_adrs(date, daily_database, 20)
-		if adr is None:
-			continue
-		# calculate Jan flag
-		if date.month==1:
-			jan = [1]
-		else:
-			jan = [0]
-		nmr = get_next_mr(date, monthly_database)
-		if nmr is None:
-			continue
-		input_data = amr + adr + jan + nmr
-		input_datas.append(input_data)
-	return input_datas
+    @param      db    The database
+    @param      dir   The directory
 
-def parse_database(file_path):
-	'''
-	parse a signel file into daily database and monthly database
-	one assumption of using this function is that the data lenght is the same
-	for every stock
-	'''
-	data = get_data(file_path)
-	data = data['Sheet1']
-	daily_database = []
-	monthly_database = []
-	
-	last_month_date = None
-	last_month_value = 0
-	for id, row in enumerate(data):
-		# skip the header
-		if id == 0:
-			continue
-		date = row[0]
-		vclose = float(row[4])
-		vopen = float(row[1])
-		volume = float(row[5])
-		daily_return = (vclose - vopen)/vopen
-		if last_month_date is None:
-			last_month_date = date
-			last_month_value = vclose
-		else:
-			if not is_same_month(date, last_month_date):
-				# new month value is equal to last day closed price
-				# get the new month from last day in the daily database
-				new_month = daily_database[-1]
-				new_month_value = new_month[2] # 2 is the closed value
-				new_month_date = new_month[0]
-				monthly_return = cal_ar(last_month_value, new_month_value)
-				monthly_database.append( [new_month_date, new_month_value, monthly_return] )
-				last_month_date = date
-				last_month_value = new_month_value
-		daily_database.append( [date, vopen, vclose, daily_return] )
-	return daily_database, monthly_database
+    @return     { description_of_the_return_value }
+    """
+    print("Processing Data, Please wait")
+    mdb = get_monthly_database(db)
 
-def write_input_data(file_path, input_data):
-	with open(file_path, 'wt') as csvfile:
-		writer = csv.writer(csvfile, delimiter=',', quoting=csv.QUOTE_NONE)
-		for data in input_data:
-			writer.writerow(["% .4f"%x for x in data])
+    print("Calculating Acumulative Montly Return")
+    # idb contains { stock_name: {monthly_date: {"AMR:[12 accumulative monthly return], "ADR":[20 days dialy return]} } }
+    idb = {}
+    # calculate the 12 month momentum
+    monthly_return_range = 12
+    for stock, value in mdb.items(): # stock is the stock.name, value should be the dict of {date:value}
+        # we need at least two extra month to process
+        if len(value) < monthly_return_range + 2:
+            #if there is not enough data to process
+            continue
+        if stock not in idb:
+            idb.update({stock:OrderedDict()})
+        # start with 1 because we need t - 13
+        # finished with  - mm_rage -1 because we need next month value for monthly return
+        srange = range(1, len(value) - monthly_return_range)
+        for sid in srange:
+            base_month = value.items()[sid - 1][0]
+            base_month_value = value[base_month]["Current"]
+            # calculate the acumulated monthly return
+            amr = []
+            for cid in range(monthly_return_range):
+                current_month = value.items()[sid + cid][0]
+                current_month_value = value[current_month]["Current"]
+                mr = cal_ar(base_month_value, current_month_value)
+                amr.append(mr)
+            if len(amr)!= monthly_return_range:
+                print("THIS SHOULD NOT HAPPEN: AMR length not match")
+            idb[stock].update({current_month:{"AMR":amr}})
+            next_month_id = sid + monthly_return_range
+            if next_month_id > len(value)-1:
+                print("THIS SHOULD NOT HAPPEN: Next Month ID greater than it's maximum length")
+            next_month = value.items()[next_month_id][0]
+            next_month_return = value[next_month]["Monthly Return"]
+            # print(base_month, current_month, next_month)
+            
+            # NMR stands for Next Month Return
+            idb[stock][current_month]["NMR"] = next_month_return
+        if not idb[stock]:
+            print("THIS SHOULD NOT HAPPEN: No value found for this stock", stock, len(value))
 
-def generate_fake_data(input_data):
-	input_array = numpy.array(input_data)
-	std = numpy.std(input_array, axis=0)
-	mu = numpy.std(input_array, axis=0)
-	numpy.random.normal()
-	fake_array = copy.deepcopy(input_array)
-	for row in fake_array:
-		for id, col in enumerate(row):
-			rand_num = random.gauss(mu[id], std[id])
-			row[id] = row[id] + rand_num
-	# make the flag eaqual
-	fake_array[:,-2] = input_array[:,-2]
-	return fake_array.tolist()
+    print("Calculating Acumulative Daily Return")
+    # for every idb month calculate it's 20 days return
+    # idb contains { stock_name: {monthly_date:[12 accumulative monthly return] } }
+    daily_return_length = 20
+    for stock, value in idb.items():
+        for month, amr in value.items():
+            data = db.get_last_N_days_data(stock, month, daily_return_length+1)
+            if data is None:
+                continue
+            if (len(data) < daily_return_length + 1):
+                print("THIS SHOULD NOT HAPPEN: Not enough day for this stock", stock, month, len(data))
+                continue
+            start_date = None
+            start_value = None
+            adr = []
+            for xdate, xvalue in data.items():
+                if start_date == None:
+                    start_date = xdate
+                    start_value = xvalue["Close"]
+                    continue
+                current_value = xvalue["Close"]
+                dr = cal_ar(start_value, current_value)
+                adr.append(dr)
+            if len(adr) != daily_return_length:
+                print("ADR length not match Should not happen")
+                idb[stock][month] = {}
+            idb[stock][month].update({"ADR":adr})
 
-DATA_VERSION = "0.1.2"
-DATA_ADDRESS = "../data/CSI/"
-WRITE_ADDRESS = "../pdata/"
+    for stock, value in idb.items():
+        for date, xvalue in value.items():
+            if date.month == 1:
+                idb[stock][date]["Jan"] = 1
+            else:
+                idb[stock][date]["Jan"] = 0
 
-def generate_database(data_address=DATA_ADDRESS, write_address=WRITE_ADDRESS, use_fakedata=False, zscore=True):
+    # find all the end dates in the database
+    all_month_dates = []
+    all_stock_name = []
+    for stock, value in idb.items():
+        if stock not in all_stock_name:
+            all_stock_name.append(stock)
+        for date in value:
+            if date not in all_month_dates:
+                all_month_dates.append(date)
 
-	write_address = os.path.abspath(write_address)  # pdata Stands for processed data
-	data_address = os.path.abspath(data_address)
-	data_files = os.listdir(data_address)
+    print("Calculating the Median")
+    # find all the meadian in the database
+    medians = {}
+    means = {}
+    for date in all_month_dates:
+        # print(date)
+        nmrs = []
+        for stock in idb:
+            if date in idb[stock]:
+                nmrs.append(idb[stock][date]["NMR"])
+        nmrs = numpy.array(nmrs)
+        median = numpy.median(nmrs)
+        mean = numpy.mean(nmrs)
+        medians[date] = median
+        means[date] = mean
 
-	if os.path.exists(write_address):
-		shutil.rmtree(write_address)
-	os.makedirs(write_address)
-	
-	# #######
-	# # find all file length
-	# all_num_lines = []
-	# for file in data_files:
-	# 	file_path = os.path.join(data_address, file)
-	# 	num = 0
-	# 	with open(file_path,'rt') as read_file:
-	# 		for row in read_file:
-	# 			num +=1
-	# 	all_num_lines.append(num)
-	# print(all_num_lines)
-	# # count the majority length
-	# all_length_dict = {}
-	# for num_line in all_num_lines:
-	# 	if num_line not in all_length_dict:
-	# 		all_length_dict[num_line] = 1
-	# 	else:
-	# 		all_length_dict[num_line] +=1
-	# maximum_length = max(all_length_dict.iteritems(),key=lambda x: x[1])
-	# maximum_length = maximum_length[0]
-	# print("Uisng the maximum length", maximum_length)
+    print("Noramlizing Input")
+    # zero score normalization
+    # calculate mean
+    all_means = {}
+    # odb stands for output database
+    odb = OrderedDict()
+    for date in all_month_dates:
+        count = 0
+        # in all_value row is stock, col is value
+        all_value = []
+        astocks = []
+        for stock in idb:
+            if date in idb[stock]:
+                astocks.append(stock)
+                value = numpy.array(idb[stock][date]["AMR"] + idb[stock][date]["ADR"] +[idb[stock][date]["Jan"]])
+                all_value.append(value)
+                count += 1
+        if len(all_value) == 1:
+            print("Found a date that only have one value",date,stock)
+            continue
+        all_value = numpy.array(all_value)
+        # z-score is happening here
+        for n, col in enumerate(all_value.T):
+            if n == all_value.shape[1]-1:
+                continue
+            mu = numpy.mean(col)
+            sigma = numpy.std(col)
+            all_value[:,n] = (col - mu)/sigma
 
-	# valid_files = []
-	# for id, num_line in enumerate(all_num_lines):
-	# 	if num_line == maximum_length:
-	# 		valid_files.append(data_files[id])
-	# data_files = valid_files
-	# #######
-	# found out the lenght of the data is actually very diverse, so filtering by the number of lines
-	# in the file is actually not a good idea.
+        if date not in odb:
+            odb.update({date:{}})
+        # constrcut the final output
+        for m, row in enumerate(all_value):
+            stock = astocks[m]
+            median = medians[date]
+            nmr = idb[stock][date]["NMR"]
+            if nmr > median:
+                oc = [1,0]
+            else:
+                oc = [0,1]
+            oc = numpy.array(oc)
+            odb[date].update({stock:{
+                "Input": all_value[m,:],
+                "Class": oc,
+                "NMR": nmr
+                }})
+    return odb
 
-	# get all the input data
-	all_datas = []
-	count = 0
-	for file in data_files:
-		file_path = os.path.join(data_address, file)
-		# print(file_path)
-		[daily_database, monthly_database] = parse_database(file_path)
-		input_data = get_input_data(daily_database, monthly_database)
-		all_datas.append(input_data)
-		count += 1
-		# if count > 10:
-		# 	break
-	# for data in monthly_database:
-	# 	print(data)
+INPUT_ADDRESS = os.path.abspath("../pdata/nyse.rdb")
+OUTPUT_ADDRESS = os.path.abspath("../pdata/momentum.db")
+import nyse_reader as data_reader
+from database_manager import DatabaseManager 
 
-	# count the majority length
-	all_length_dict = {}
-	for data in all_datas:
-		if len(data) not in all_length_dict:
-			all_length_dict[len(data)] = 1
-		else:
-			all_length_dict[len(data)] +=1
-	maximum_length = max(all_length_dict.iteritems(),key=lambda x: x[1])
-	maximum_length = maximum_length[0]
-	print("Uisng the maximum length",maximum_length)
-	
-	# filter out the data that doesn't have the same length
-	useful_data = []
-	for data in all_datas:
-		if len(data) == maximum_length: # 107 is the total month
-			useful_data.append(data)
+def generate_database(input_address = INPUT_ADDRESS, output_address = OUTPUT_ADDRESS):
+    
+    save_dir = os.path.abspath("../pdata/momentum.db")
+    if data_reader.database_exsists():
+        db = data_reader.load()
+    else:
+        db = data_reader.generate_database()
 
-	all_datas = useful_data
-	all_datas = numpy.array(all_datas, dtype = numpy.float64)
-	# add another row to the data to store the normalized output
-	all_datas = numpy.append(all_datas, numpy.zeros((all_datas.shape[0],all_datas.shape[1],1)),axis=2)
-
-	# first axis is depth which is each stock
-	# second axis is row which is each month
-	# third axis is col which is every input, last col is label
-	# [... flag, monthly_return, normalized_montly_return]
-	for row in range(all_datas.shape[1]):
-		for col in range(all_datas.shape[2]):
-			# if col is the flag col don't nromalize, if col is the last col don't normalize 
-			if col == all_datas.shape[2] - 3 or col == all_datas.shape[2] - 1:
-				continue
-			# if the col is the montly return col feed the data to tcol
-			if col == all_datas.shape[2] - 2:
-				tcol = col + 1
-			else:
-				tcol = col
- 
-			if zscore:
-				# z-score implementation
-				mu = numpy.mean(all_datas[:,row,col])
-				sigma = numpy.std(all_datas[:,row,col])
-				all_datas[:,row,tcol] = (all_datas[:,row,col] - mu)/sigma
-			else:
-				# normalize by the maximum and put the result to tcol
-				# minus the minimal first to get all data positive
-				minimum = numpy.amin(all_datas[:,row,col])
-				all_datas[:,row,tcol] = (all_datas[:,row,col]-minimum+0.01)
-				# divide by the new maximum to normalze the data from 0 to 1
-				maximum = numpy.amax(all_datas[:,row,tcol])
-				all_datas[:,row,tcol] = (all_datas[:,row,tcol] / maximum) * 0.99
-
-	# find the median value in the output list and classify them into two class
-	# add three rows to store the normalized stock value, the 
-	all_datas = numpy.append(all_datas, numpy.zeros((all_datas.shape[0],all_datas.shape[1],2)),axis=2) 
-	# [... flag, monthly_return, normalized_montly_return, class1, class2]
-	for row in range(all_datas.shape[1]):
-		median = numpy.median(all_datas[:,row,-4])
-		for depth in range(all_datas.shape[0]):
-			if all_datas[depth,row,- 4] > median:
-				all_datas[depth,row,-1] = 0
-				all_datas[depth,row,-2] = 1
-			else:
-				all_datas[depth,row,-1] = 1
-				all_datas[depth,row,-2] = 0
-
-	# write into a numpy binary file
-	write_path = os.path.join(write_address, DATA_VERSION+".db")
-	with open(write_path, 'wb') as bfile:
-		numpy.save(bfile, all_datas)
-
-	# test if the file is really wroted
-	with open(write_path,'rb') as bfile:
-		read_datas = numpy.load(bfile)
-		print("Saved as Database has shape",read_datas.shape)
-
-	# write a sample of readable data 
-	file_name = "sample.csv"
-	write_path = os.path.join(write_address, file_name)
-	write_data = all_datas[0,:,:]
-	write_input_data(write_path, all_datas[0,:,:])
-
-def main():
-	generate_database()
+    odb = transform(db)
+    output_file = open(save_dir,'wb')
+    print("Saving Database, Please Wait")
+    pickle.dump(odb,output_file)
 
 if __name__ == '__main__':
-	main()
+    generate_database()
+    # a = []
+    # print(len(a))
+    # 
+    # a = numpy.array([1,2,3,4])
+    # b = numpy.array([1,2,3,4])
+    # c = numpy.array([a,b])
+    # print(c)

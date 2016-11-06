@@ -49,7 +49,7 @@ class DatabaseManager:
         self.dates = []
 
     def create_new_stock(self, stock_name):
-        print("Added new stock",stock_name)
+        print("Added new stock %s"%stock_name)
         # st = Stock(stock_name, stock_id, len(self.stocks))
         st = {stock_name:collections.OrderedDict()}
         self.stocks.update(st)
@@ -76,6 +76,7 @@ class DatabaseManager:
             return False
 
     def sort(self):
+        print("Sorting database, plase wait")
         for stock in self.stocks:
             self.stocks[stock] = collections.OrderedDict(sorted(self.stocks[stock].items(), key=itemgetter(0)))
 
