@@ -105,22 +105,32 @@ class DeepLinearNN(object):
     weights.append(tf.Variable(tf.truncated_normal([self.layers[-1], output_size])))
     bias.append(tf.Variable(tf.truncated_normal([output_size])))
 
+    # af = lambda x: tf.nn.relu(x)
+    # af = lambda x: tf.nn.relu6(x)
+    # af = lambda x: tf.nn.crelu(x)
+    # af = lambda x: tf.nn.elu(x)
+    af = lambda x: tf.tanh(x)
+    # af = lambda x: tf.sigmoid(x)
+    # af = lambda x: tf.nn.softplus(x)
+    # af = lambda x: tf.nn.softsign(x)
     for id in range(len(weights)):
       if id == 0:
-        vh = tf.matmul(x, weights[id]) + bias[id]
+        vh = af(tf.matmul(x, weights[id]) + bias[id])
       elif id == len(weights)-1:
-        y = tf.matmul(vh, weights[id]) + bias[id]
+        y = af(tf.matmul(vh, weights[id]) + bias[id])
       else:
-        vh = tf.matmul(vh, weights[id]) + bias[id]
+        vh = af(tf.matmul(vh, weights[id]) + bias[id])
 
     # y = tf.clip_by_value(y,1e-10,1.0)
     # TBD: whether we want to normalize the output from 0 to 1
-    y = (y - tf.reduce_min(y) + 1e-10)/(tf.reduce_max(y)-tf.reduce_min(y))
+    # y = (y - tf.reduce_min(y) + 1e-10)/(tf.reduce_max(y)-tf.reduce_min(y))
     y_ = tf.placeholder(tf.float32, shape=[None, output_size])
 
     # use L2 loss
     if db.classification == True:
-      loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
+      # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
+      loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(y, y_))
+      # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(y, y_))
       # loss = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y,1e-10,1.0)))
     else:
       loss = tf.nn.l2_loss(y - y_)
