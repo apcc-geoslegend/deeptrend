@@ -47,8 +47,8 @@ def feed_data(db, dir):
 				vclose = float(row[3])
 				db.feed_current_stock(date,{'Close':vclose})
 			count += 1
-			if count > 1000:
-				break
+			# if count > 1000:
+			# 	break
 	# db.sort()
 	print("added row database for NYSE, total %d stocks"%count)
 	return db
@@ -56,7 +56,7 @@ def feed_data(db, dir):
 def load():
 	if database_exsists():
 		file = open(WRITE_ADDRESS, 'rb')
-		print("Loading Database: NYSE")
+		print("Loading Database: NYSE, Please Wait")
 		db = pickle.load(file)
 		return db
 	else:

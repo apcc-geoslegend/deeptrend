@@ -1,6 +1,4 @@
-# Calls ffnn_test.py
-#Change ffnn to a library
-import ffnn
+import dlnn as NN
 import csv
 import os.path
 
@@ -24,7 +22,7 @@ TODO:
 
 """
 
-class ModelUI(object):
+class DLNNWrapper(object):
 
   def __init__(self):
   # layers, epoch, batch_size, learning_rate, optimizer, classify, test_pct, backtest_pct
@@ -67,20 +65,15 @@ class ModelUI(object):
               break
             token.append(row)
           if run:
-            nn = ffnn.ModelFF(token)
+            nn = NN.DeepLinearNN(token)
             nn.run_model()
             write_file = open(file_path,'wt')
             write_rows.append("Test results: \n")
             write_rows.append("Accuracy:    %s\n"%str(nn.output_accuracy))
             write_rows.append("Final Loss:  %s\n"%str(nn.output_loss))
             write_rows.append("AMR:         "+"".join([str(x)+"," for x in nn.acc_monthly_returns]))
-            # amr_row = ""
-            # for x in nn.acc_monthly_returns:
-            #   amr_row += str(x) + ","
-            # write_rows.append(amr_row+"\n")
             for row in write_rows:
               write_file.write(row)
-
           #current unexecuted file holder params
           #NOTE initialize ModelFF object with params list
           #NOTE execute run_model
@@ -88,5 +81,5 @@ class ModelUI(object):
           #NOTE append new line then dictionary line by line to current file
 
 if __name__ == '__main__':
-  wrapper = ModelUI()
+  wrapper = DLNNWrapper()
   wrapper.run("./config")

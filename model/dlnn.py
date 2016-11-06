@@ -11,15 +11,19 @@ import tensorflow as tf
 import numpy
 import time
 
-class ModelFF(object):
+## TODO:
+## Better to have a param supper class, but we can do it later
+class DeepLinearNNParams():
+  pass
 
-  #NOTE @Di why did you make this it's own function?
-  #Why not just give it tf.float32 ?
-  """
-  def data_type():
-    return tf.float32
-  """
+class DeepLinearNN(object):
 
+  """
+  @phil,
+  here instead of initialize params by some nested list structure,
+  better to have a defined parameters class, then we can set default value in the
+  param class
+  """
   def __init__(self, params):
     """
     Initializes all hyper parameters and model params
@@ -28,6 +32,7 @@ class ModelFF(object):
       params: A list indexed as followers: 0 = layers (list), 1 = epoch, 2 = batch_size, 3 = learning_rate, 4 = optimizer,
       5 = classify, 6 = test_pct, 7 = backtest_pct, 8 = buying_precentage
     """
+
     #Input parameters
     self.layers = map(int, params[0])
     print("Using layer:        ",self.layers)
@@ -125,15 +130,10 @@ class ModelFF(object):
     regularizers = tf.reduce_mean([tf.nn.l2_loss(w) for w in weights] + [tf.nn.l2_loss(b) for b in bias])
     loss += 5e-4 * regularizers
 
-    # learning_rate = tf.train.exponential_decay(
-    #     self.base_learning_rate,                # Base learning rate.
-    #     global_step,         # Current index into the dataset.
-    #     max_train_steps,     # Decay step.
-    #     0.95,                # Decay rate.
-    #     staircase=True)
-    #     
-    # learning_rate = tf.constant(self.base_learning_rate)
-    
+    """
+    @phil,
+    here learning rate decay can be another parameter
+    """
     lr_decay = False
     if lr_decay:
       learning_rate = tf.train.exponential_decay( 
