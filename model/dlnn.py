@@ -135,7 +135,7 @@ class DeepLinearNN(object):
     # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
     # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(y, y_))
     # loss = tf.reduce_mean(tf.nn.log_poisson_loss(y,y_))
-    loss = tf.reduce_mean(tf.nn.l2_loss(y - y_))
+    loss = tf.nn.l2_loss(y - y_)/self.batch_size
 
     global_step = tf.Variable(0, dtype=tf.float32)
     # add regularizer
@@ -245,14 +245,24 @@ class DeepLinearNN(object):
 if __name__ == '__main__':
   #
   params =[]
+  # layer
   params.append([100,100,100,100,100])
+  # epoch
+  params.append([1000])
+  # batch size
   params.append([100])
-  params.append([100])
+  # learning rage
   params.append([0.1])
+  # optimizer
   params.append(['gd'])
+  # classify
   params.append([True])
+  # test precentage
   params.append([0.3])
+  # back test precentage
   params.append([0.1])
-  params.append([0.05])
+  # buying precentage
+  params.append([0.01])
+  # run
   dlnn = DeepLinearNN(params)
   dlnn.run_model()
