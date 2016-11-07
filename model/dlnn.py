@@ -109,8 +109,8 @@ class DeepLinearNN(object):
     # af = lambda x: tf.nn.relu6(x)
     # af = lambda x: tf.nn.crelu(x)
     # af = lambda x: tf.nn.elu(x)
-    af = lambda x: tf.tanh(x)
-    # af = lambda x: tf.sigmoid(x)
+    # af = lambda x: tf.tanh(x)
+    af = lambda x: tf.sigmoid(x)
     # af = lambda x: tf.nn.softplus(x)
     # af = lambda x: tf.nn.softsign(x)
     for id in range(len(weights)):
@@ -126,14 +126,13 @@ class DeepLinearNN(object):
     # y = (y - tf.reduce_min(y) + 1e-10)/(tf.reduce_max(y)-tf.reduce_min(y))
     y_ = tf.placeholder(tf.float32, shape=[None, output_size])
 
-    # use L2 loss
-    if db.classification == True:
-      # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
-      loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(y, y_))
-      # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(y, y_))
-      # loss = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y,1e-10,1.0)))
-    else:
-      loss = tf.nn.l2_loss(y - y_)
+    # choose the loss function
+    # loss = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y,1e-10,1.0)))
+    # loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(y, y_))
+    # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
+    # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(y, y_))
+    # loss = tf.reduce_mean(tf.nn.log_poisson_loss(y,y_))
+    loss = tf.reduce_mean(tf.nn.l2_loss(y - y_))
 
     global_step = tf.Variable(0, dtype=tf.float32)
     # add regularizer
@@ -181,10 +180,11 @@ class DeepLinearNN(object):
     tf.initialize_all_variables().run()
     for _ in xrange(max_train_steps):
       batch_xs, batch_ys = db.next_batch(self.batch_size)
-      opout,l,lr,gs = sess.run([train_step,loss,learning_rate,global_step], feed_dict={x: batch_xs, y_: batch_ys})
+      opout,l,lr,gs,output = sess.run([train_step,loss,learning_rate,global_step,y], feed_dict={x: batch_xs, y_: batch_ys})
       if gs%evaluation_frequency == 0:
         duration = time.time()-total_start_time
         print("loss is % 2.3f, learning rate is % 2.3f, time used is % 3.3f"%(l,lr,duration))
+        print("output is ",output[0])
     # log the final loss
     self.loss = l
 
