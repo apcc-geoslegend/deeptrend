@@ -90,6 +90,7 @@ class DeepLinearNN(object):
     weights = []
     bias = []
 
+    # with tf.device('/gpu:0'):
     x = tf.placeholder(tf.float32, shape=[None, input_size])
     weights.append(tf.Variable(tf.truncated_normal([input_size, self.layers[0]])))
     bias.append(tf.Variable(tf.truncated_normal([self.layers[0]])))
@@ -173,18 +174,31 @@ class DeepLinearNN(object):
     else: #NOTE Specialty optimizer to try out here
       pass
 
-    sess = tf.InteractiveSession()
+    # if want to show what devices are using, turn log_device_placement True
+    config = tf.ConfigProto(log_device_placement=False)
+    # this is already the default
+    # config.gpu_options.allow_growth = True
+    sess = tf.InteractiveSession(config=config)
+    # if use Session() you have to put with a as_default()
+    # sess = tf.Session(config=config)
+    # with sess.as_default():
     evaluation_frequency = 100
-    total_start_time = time.time()
     # Training
+    total_start_time = time.time()
+    loop_strat_time = time.time()
     tf.initialize_all_variables().run()
-    for _ in xrange(max_train_steps):
+    for step in xrange(max_train_steps):
       batch_xs, batch_ys = db.next_batch(self.batch_size)
       opout,l,lr,gs,output = sess.run([train_step,loss,learning_rate,global_step,y], feed_dict={x: batch_xs, y_: batch_ys})
       if gs%evaluation_frequency == 0:
         duration = time.time()-total_start_time
-        print("loss is % 2.3f, learning rate is % 2.3f, time used is % 3.3f"%(l,lr,duration))
+        loop_duration = time.time() - loop_strat_time
+        operation_precentage = step/max_train_steps*100
+        print("loss: % 2.3f, learning rate: % 2.3f, operation precentage:% 2.2f%% loop time used:% 3.3f, total time used:% 3.3f"
+          %(l,lr,operation_precentage,loop_duration,duration))
         print("output is ",output[0])
+        loop_strat_time = time.time()
+    print("Total Time Used For Trainning: %f"%(time.time()-total_start_time))
     # log the final loss
     self.loss = l
 
