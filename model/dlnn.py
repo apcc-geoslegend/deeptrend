@@ -10,6 +10,7 @@ from ult.momentum_reader import MomentumReader
 import tensorflow as tf
 import numpy
 import time
+import datetime
 
 ## TODO:
 ## Better to have a param supper class, but we can do it later
@@ -85,7 +86,7 @@ class DeepLinearNN(object):
     data_size = db.get_train_data_size()
     print("Input size is %s, Output size is %s, Trainning Data Size is %s"%(input_size,output_size,data_size))
 
-    max_train_steps = int(data_size/self.batch_size*self.epoch)
+    max_train_steps = int(data_size*self.epoch/self.batch_size)
     #layers = [100,100,100,100,100,100,100] #NOTE
     weights = []
     bias = []
@@ -99,6 +100,7 @@ class DeepLinearNN(object):
       if id == 0:
         continue
       W = tf.Variable(tf.truncated_normal([self.layers[id-1], self.layers[id]]))
+      W = tf.nn.dropout(W, 0.5)
       b = tf.Variable(tf.truncated_normal([self.layers[id]]))
       weights.append(W)
       bias.append(b)
@@ -190,14 +192,18 @@ class DeepLinearNN(object):
     for step in xrange(max_train_steps):
       batch_xs, batch_ys = db.next_batch(self.batch_size)
       opout,l,lr,gs,output = sess.run([train_step,loss,learning_rate,global_step,y], feed_dict={x: batch_xs, y_: batch_ys})
-      if gs%evaluation_frequency == 0:
-        duration = time.time()-total_start_time
-        loop_duration = time.time() - loop_strat_time
+      if step%evaluation_frequency == 1:
+        now = time.time()
+        duration = now - total_start_time
+        loop_duration = now - loop_strat_time
         operation_precentage = step/max_train_steps*100
+        loop_strat_time = now
+        average_loop_time = duration / step
+        time_left = average_loop_time * (max_train_steps-step)
         print("loss: % 2.3f, learning rate: % 2.3f, operation precentage:% 2.2f%% loop time used:% 3.3f, total time used:% 3.3f"
           %(l,lr,operation_precentage,loop_duration,duration))
-        print("output is ",output[0])
-        loop_strat_time = time.time()
+        print("Estimated time left is: %f mins"%(time_left/60))
+        print("output sample is ",output[0])
     print("Total Time Used For Trainning: %f"%(time.time()-total_start_time))
     # log the final loss
     self.loss = l
