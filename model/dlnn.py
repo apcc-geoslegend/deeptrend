@@ -241,3 +241,18 @@ class DeepLinearNN(object):
         self.acc_monthly_returns.append(acc_return)
       print("Accumulated return at month %d is % 3.3f%%"%(date, acc_return))
     return acc_return
+
+if __name__ == '__main__':
+  #
+  params =[]
+  params.append([100,100,100,100,100])
+  params.append([100])
+  params.append([100])
+  params.append([0.1])
+  params.append(['gd'])
+  params.append([True])
+  params.append([0.3])
+  params.append([0.1])
+  params.append([0.05])
+  dlnn = DeepLinearNN(params)
+  dlnn.run_model()

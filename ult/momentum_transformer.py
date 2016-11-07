@@ -137,6 +137,24 @@ def transform(db):
         if not idb[stock]:
             print("THIS SHOULD NOT HAPPEN: No value found for this stock", stock, len(value))
 
+    # Just in case of it break the continunity of the month, it's better to
+    # apply the filter after it calculate the month return
+    print("Applying filters on the data")
+    minimum_total_value = 2.5e4
+    minimum_close_price = 5 
+    # apply filter:
+    for stock in idb:
+        for date in idb[stock]:
+            if db.stocks[stock][date]["Close"] < minimum_close_price:
+                idb[stock].pop(date)
+                print("Pop stock %s at date %s that closed value is less than %f"%(stock, str(date), minimum_close_price))
+                continue
+            total_dollar_volume = db.stocks[stock][date]["Close"] * db.stocks[stock][date]["Volume"]
+            if total_dollar_volume < minimum_total_value:
+                idb[stock].pop(date)
+                print("Pop stock %s at date %s that totoal value is %f which is less than %f"%(stock, str(date), total_dollar_volume, minimum_total_value))
+                continue
+
     print("Calculating Acumulative Daily Return")
     # for every idb month calculate it's 20 days return
     # idb contains { stock_name: {monthly_date:[12 accumulative monthly return] } }
@@ -204,8 +222,9 @@ def transform(db):
     all_means = {}
     # odb stands for output database
     odb = OrderedDict()
+    count = 0
+    # stock_num = 0
     for date in all_month_dates:
-        count = 0
         # in all_value row is stock, col is value
         all_value = []
         astocks = []
@@ -244,6 +263,7 @@ def transform(db):
                 "Class": oc,
                 "NMR": nmr
                 }})
+    print("Toltal Data Point is %d, Total valid stocks is around %d"%(count, int(count/len(all_month_dates))) )
     return odb
 
 INPUT_ADDRESS = os.path.abspath("../pdata/nyse.rdb")

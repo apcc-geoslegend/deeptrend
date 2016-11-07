@@ -101,11 +101,9 @@ class DatabaseManager:
     def get_current_month_all_data(self,stock,date):
         if stock not in self.stocks:
             return None
-        
         values = self.stocks[stock]
         if date not in values:
             return None
-
         all_datas = collections.OrderedDict()
         for xdate,value in values.items():
             if self.is_same_month(xdate, date):
