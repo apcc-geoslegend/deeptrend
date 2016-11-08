@@ -127,15 +127,16 @@ class DeepLinearNN(object):
     # y = tf.clip_by_value(y,1e-10,1.0)
     # TBD: whether we want to normalize the output from 0 to 1
     # y = (y - tf.reduce_min(y) + 1e-10)/(tf.reduce_max(y)-tf.reduce_min(y))
+    # y_ is the target
     y_ = tf.placeholder(tf.float32, shape=[None, output_size])
 
     # choose the loss function
     # loss = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y,1e-10,1.0)))
-    # loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(y, y_))
+    loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(y, y_))
     # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
     # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(y, y_))
     # loss = tf.reduce_mean(tf.nn.log_poisson_loss(y,y_))
-    loss = tf.nn.l2_loss(y - y_)/self.batch_size
+    # loss = tf.nn.l2_loss(y - y_)/self.batch_size
 
     global_step = tf.Variable(0, dtype=tf.float32)
     # add regularizer
@@ -146,12 +147,14 @@ class DeepLinearNN(object):
     @phil,
     here learning rate decay can be another parameter
     """
-    lr_decay = False
+    lr_decay = True
+    # 10 means every 10% decrease once
+    decay_step = max_train_steps/10
     if lr_decay:
       learning_rate = tf.train.exponential_decay( 
             self.base_learning_rate,        # Base learning rate.
             global_step,                    # Current index into the dataset.
-            max_train_steps/self.batch_size,# Decay steps.
+            decay_step,                     # Decay steps.
             0.96,                           # Decay rate.
             staircase=True)
     else:  
@@ -200,10 +203,11 @@ class DeepLinearNN(object):
         loop_strat_time = now
         average_loop_time = duration / step
         time_left = average_loop_time * (max_train_steps-step)
-        print("loss: % 2.3f, learning rate: % 2.3f, operation precentage:% 2.2f%% loop time used:% 3.3f, total time used:% 3.3f"
-          %(l,lr,operation_precentage,loop_duration,duration))
+        print("loss: % 2.3f, learning rate: % 2.3f, operation precentage:% 2.2f%% loop time used:% 3.3f, total time used:% 3.3f, global step: %d, maximum step: %d"
+          %(l,lr,operation_precentage,loop_duration,duration,gs,max_train_steps))
         print("Estimated time left is: % .2f mins"%(time_left/60))
-        print("output sample is ",output[0])
+        print("output sample is      ",output[0])
+        print("Corresponding lable is",batch_ys[0])
     print("Total Time Used For Trainning: %f"%(time.time()-total_start_time))
     # log the final loss
     self.loss = l
@@ -246,13 +250,13 @@ if __name__ == '__main__':
   #
   params =[]
   # layer
-  params.append([100,100,100,100,100])
+  params.append([100,100,100])
   # epoch
-  params.append([500])
-  # batch size
   params.append([100])
+  # batch size
+  params.append([1000])
   # learning rage
-  params.append([0.1])
+  params.append([1])
   # optimizer
   params.append(['gd'])
   # classify

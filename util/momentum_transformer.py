@@ -1,18 +1,11 @@
 # this data transformer will transform what ever data file in ../data/
 # into a database file that using momenteum strategy
 
-import csv
 import os.path
-import shutil
 import warnings
 import numpy
 import copy
-import matplotlib.pyplot as plt
-import random
-
-import json
 import cPickle as pickle
-import datetime
 from collections import OrderedDict
 
 def cal_ar(start_price, close_price):
@@ -50,8 +43,8 @@ def get_monthly_database(db):
     """
     """
     The way it finds the next month is ex:
-    2006,1,30 Closed = 200
-    2006,2,1 Closed = 100
+    2006,1,30 Closed:200
+    2006,2,1  Closed:100
     Once the month changed to a new one, add the last day into a new month
     {(2006,1,30),"Closed":200}
     """
@@ -84,48 +77,44 @@ def get_monthly_database(db):
             last_day = date
     return monthly_database
 
-def transform(db):
+def cal_amr(db, idb, month_range):
     """
-    @brief      transform a database manager object into a momentum database and
-                save it into dir
-
-    @param      db    The database
-    @param      dir   The directory
-
-    @return     { description_of_the_return_value }
+    @brief      Calculate the Acumulative Monthly Return
+    
+    @param      db           The database
+    @param      idb          The idb
+    @param      month_range  The month range
+    
+    @return     the output database
     """
-    print("Processing Data, Please wait")
+
+    print("Calculating Monthly Database")
     mdb = get_monthly_database(db)
-
     print("Calculating Acumulative Montly Return")
-    # idb contains { stock_name: {monthly_date: {"AMR:[12 accumulative monthly return], "ADR":[20 days dialy return]} } }
-    idb = {}
-    # calculate the 12 month momentum
-    monthly_return_range = 12
     for stock, value in mdb.items(): # stock is the stock.name, value should be the dict of {date:value}
         # we need at least two extra month to process
-        if len(value) < monthly_return_range + 2:
+        if len(value) < month_range + 2:
             #if there is not enough data to process
             continue
         if stock not in idb:
             idb.update({stock:OrderedDict()})
         # start with 1 because we need t - 13
         # finished with  - mm_rage -1 because we need next month value for monthly return
-        srange = range(1, len(value) - monthly_return_range)
+        srange = range(1, len(value) - month_range)
         for sid in srange:
             base_month = value.items()[sid - 1][0]
             base_month_value = value[base_month]["Current"]
             # calculate the acumulated monthly return
             amr = []
-            for cid in range(monthly_return_range):
+            for cid in range(month_range):
                 current_month = value.items()[sid + cid][0]
                 current_month_value = value[current_month]["Current"]
                 mr = cal_ar(base_month_value, current_month_value)
                 amr.append(mr)
-            if len(amr)!= monthly_return_range:
+            if len(amr)!= month_range:
                 print("THIS SHOULD NOT HAPPEN: AMR length not match")
             idb[stock].update({current_month:{"AMR":amr}})
-            next_month_id = sid + monthly_return_range
+            next_month_id = sid + month_range
             if next_month_id > len(value)-1:
                 print("THIS SHOULD NOT HAPPEN: Next Month ID greater than it's maximum length")
             next_month = value.items()[next_month_id][0]
@@ -136,35 +125,55 @@ def transform(db):
             idb[stock][current_month]["NMR"] = next_month_return
         if not idb[stock]:
             print("THIS SHOULD NOT HAPPEN: No value found for this stock", stock, len(value))
+    return idb
 
-    # Just in case of it break the continunity of the month, it's better to
-    # apply the filter after it calculate the month return
+def filter(db, idb):
+    """
+    @brief      filter idb by the designed filter
+    
+    @param      db    The raw database
+    @param      idb   The input database
+    
+    @return     the input data base
+    """
+    # filter idb with designed filter
     print("Applying filters on the data")
+    filter_by_close_price = True
+    filter_by_total_dollar = False
     minimum_total_value = 2.5e4
     minimum_close_price = 5 
     # apply filter:
     for stock in idb:
         for date in idb[stock]:
-            if db.stocks[stock][date]["Close"] < minimum_close_price:
-                idb[stock].pop(date)
-                print("Pop stock %s at date %s that closed value is less than %f"%(stock, str(date), minimum_close_price))
-                continue
-            total_dollar_volume = db.stocks[stock][date]["Close"] * db.stocks[stock][date]["Volume"]
-            if total_dollar_volume < minimum_total_value:
-                idb[stock].pop(date)
-                print("Pop stock %s at date %s that totoal value is %f which is less than %f"%(stock, str(date), total_dollar_volume, minimum_total_value))
-                continue
+            if filter_by_close_price:
+                if db.stocks[stock][date]["Close"] < minimum_close_price:
+                    idb[stock].pop(date)
+                    print("Pop stock %s at date %s that closed value is less than %f"%(stock, str(date), minimum_close_price))
+                    continue
+            if filter_by_total_dollar:
+                total_dollar_volume = db.stocks[stock][date]["Close"] * db.stocks[stock][date]["Volume"]
+                if total_dollar_volume < minimum_total_value:
+                    idb[stock].pop(date)
+                    print("Pop stock %s at date %s that totoal value is %f which is less than %f"%(stock, str(date), total_dollar_volume, minimum_total_value))
+                    continue
+    return idb
 
-    print("Calculating Acumulative Daily Return")
-    # for every idb month calculate it's 20 days return
-    # idb contains { stock_name: {monthly_date:[12 accumulative monthly return] } }
-    daily_return_length = 20
+def cal_adr(db, idb, day_range):
+    """
+    @brief      calculate acumulative dialy return
+    
+    @param      db         The raw database
+    @param      idb        The idb
+    @param      day_range  The day range
+    
+    @return     the input database
+    """
     for stock, value in idb.items():
         for month, amr in value.items():
-            data = db.get_last_N_days_data(stock, month, daily_return_length+1)
+            data = db.get_last_N_days_data(stock, month, day_range+1)
             if data is None:
                 continue
-            if (len(data) < daily_return_length + 1):
+            if (len(data) < day_range + 1):
                 print("THIS SHOULD NOT HAPPEN: Not enough day for this stock", stock, month, len(data))
                 continue
             start_date = None
@@ -178,18 +187,23 @@ def transform(db):
                 current_value = xvalue["Close"]
                 dr = cal_ar(start_value, current_value)
                 adr.append(dr)
-            if len(adr) != daily_return_length:
+            if len(adr) != day_range:
                 print("ADR length not match Should not happen")
                 idb[stock][month] = {}
             idb[stock][month].update({"ADR":adr})
+    return idb
 
+def cal_jan(idb):
+    # calculate the Jan flag
     for stock, value in idb.items():
         for date, xvalue in value.items():
             if date.month == 1:
                 idb[stock][date]["Jan"] = 1
             else:
                 idb[stock][date]["Jan"] = 0
+    return idb
 
+def idb_to_odb(idb):
     # find all the end dates in the database
     all_month_dates = []
     all_stock_name = []
@@ -266,14 +280,58 @@ def transform(db):
     print("Toltal Data Point is %d, Total valid stocks is around %d"%(count, int(count/len(all_month_dates))) )
     return odb
 
+def transform(db):
+    """
+    @brief      transform a database manager object into a momentum database and
+                save it into dir
+
+    @param      db    The database
+    @param      dir   The directory
+
+    @return     { description_of_the_return_value }
+    """
+    print("Processing Data, Please wait")
+    mdb = get_monthly_database(db)
+    # idb contains { stock_name: {monthly_date: {"AMR:[12 accumulative monthly return], "ADR":[20 days dialy return]} } }
+    idb = {}
+    # calculate the 12 month momentum
+    month_rage = 12
+    cal_amr(db, idb, month_rage)
+    # Just in case of it break the continunity of the month, it's better to
+    # apply the filter after it calculate the month return
+    filter(db, idb)
+
+    print("Calculating Acumulative Daily Return")
+    # for every idb month calculate it's 20 days return
+    # idb contains { stock_name: {monthly_date:[12 accumulative monthly return] } }
+    day_range = 20
+    cal_adr(db, idb, day_range)
+
+    # clear the raw database
+    del db
+    # calculate january flag
+    cal_jan(idb)
+    # input database to output database
+    odb = idb_to_odb(idb)
+
+    return odb
+
 INPUT_ADDRESS = os.path.abspath("../pdata/nyse.rdb")
 OUTPUT_ADDRESS = os.path.abspath("../pdata/momentum.db")
 import nyse_reader as data_reader
 from database_manager import DatabaseManager 
 
 def generate_database(input_address = INPUT_ADDRESS, output_address = OUTPUT_ADDRESS):
+    """
+    @brief      A higher level wrapper for generating the database
     
-    save_dir = os.path.abspath("../pdata/momentum.db")
+    @param      input_address   The input address
+    @param      output_address  The output address
+    
+    @return     nothing
+    """
+    
+    save_dir = os.path.abspath(output_address)
     if data_reader.database_exsists():
         db = data_reader.load()
     else:
@@ -286,10 +344,9 @@ def generate_database(input_address = INPUT_ADDRESS, output_address = OUTPUT_ADD
 
 if __name__ == '__main__':
     generate_database()
-    # a = []
-    # print(len(a))
-    # 
-    # a = numpy.array([1,2,3,4])
-    # b = numpy.array([1,2,3,4])
-    # c = numpy.array([a,b])
-    # print(c)
+    
+    # a = {}
+    # def fun(a):
+    #     a["a"] = 1
+    # fun(a)
+    # print(a)

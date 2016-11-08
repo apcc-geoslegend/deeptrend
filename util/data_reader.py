@@ -4,8 +4,10 @@ from database_manager import DatabaseManager
 import cPickle as pickle
 import datetime
 
-READ_ADDRESS = os.path.abspath("../data/NYSE/")
-WRITE_ADDRESS = os.path.abspath("../pdata/nyse.rdb")
+DATABASE_NAME = "fake"
+# DATABASE_NAME = "merged"
+READ_ADDRESS = os.path.abspath("../data/"+DATABASE_NAME)
+WRITE_ADDRESS = os.path.abspath("../pdata/%s.rdb"%DATABASE_NAME)
 
 def database_exsists():
     if os.path.exists(WRITE_ADDRESS):
@@ -32,12 +34,12 @@ def feed_data(db, dir):
         if file == "0.HEADER.csv":
             file_path = os.path.join(dir, file)
             with open(file_path,'rt') as file:
-                reader = csv.reader(file)
+                reader = csv.reader(file,skipinitialspace=True)
                 for row in reader:
                     for id, col in enumerate(row):
-                        if col == 'close':
+                        if col == 'close_price':
                             col_close = id
-                        if col == 'unadjusted_close':
+                        if col == 'unadjusted_close_price':
                             col_unadjusted_close = id
                         if col == 'total_volume':
                             col_total_volume = id
@@ -66,13 +68,13 @@ def feed_data(db, dir):
             # if count > 1000:
             #   break
     # db.sort()
-    print("added row database for NYSE, total %d stocks"%count)
+    print("added row database, total %d stocks"%count)
     return db
 
 def load():
     if database_exsists():
         file = open(WRITE_ADDRESS, 'rb')
-        print("Loading Database: NYSE, Please Wait")
+        print("Loading Database, Please Wait")
         db = pickle.load(file)
         return db
     else:
