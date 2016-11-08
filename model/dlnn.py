@@ -202,7 +202,7 @@ class DeepLinearNN(object):
         time_left = average_loop_time * (max_train_steps-step)
         print("loss: % 2.3f, learning rate: % 2.3f, operation precentage:% 2.2f%% loop time used:% 3.3f, total time used:% 3.3f"
           %(l,lr,operation_precentage,loop_duration,duration))
-        print("Estimated time left is: %f mins"%(time_left/60))
+        print("Estimated time left is: % .2f mins"%(time_left/60))
         print("output sample is ",output[0])
     print("Total Time Used For Trainning: %f"%(time.time()-total_start_time))
     # log the final loss
@@ -248,7 +248,7 @@ if __name__ == '__main__':
   # layer
   params.append([100,100,100,100,100])
   # epoch
-  params.append([1000])
+  params.append([500])
   # batch size
   params.append([100])
   # learning rage

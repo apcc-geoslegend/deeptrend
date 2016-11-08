@@ -27,12 +27,12 @@ def feed_data(db, dir):
     if len(data_files) == 0:
         print("Can't find any data file, check your directory")
         return None
-        
     count = 0
     for file in data_files:
         if file == "0.HEADER.csv":
             file_path = os.path.join(dir, file)
             with open(file_path,'rt') as file:
+                reader = csv.reader(file)
                 for row in reader:
                     for id, col in enumerate(row):
                         if col == 'close':
@@ -41,7 +41,7 @@ def feed_data(db, dir):
                             col_unadjusted_close = id
                         if col == 'total_volume':
                             col_total_volume = id
-
+    print(col_close,col_unadjusted_close,col_total_volume)
     for file in data_files:
         if file == "0.HEADER.csv":
             continue
@@ -58,9 +58,9 @@ def feed_data(db, dir):
                 day = int(date[ids[1]+1:])
                 # print(year,month,day)
                 date = datetime.date(year,month,day)
-                vclose = float(row[7])
-                vuclose = float(row[8])
-                volume = float(row[9])
+                vclose = float(row[col_close])
+                vuclose = float(row[col_unadjusted_close])
+                volume = float(row[col_total_volume])
                 db.feed_current_stock(date,{'Close':vclose, 'Unadjusted Close':vuclose, 'Volume':volume})
             count += 1
             # if count > 1000:
