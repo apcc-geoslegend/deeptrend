@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(".."))
 # from ult.stock_data import StockData
-from ult.momentum_reader import MomentumReader
+from util.momentum_reader import MomentumReader
 import tensorflow as tf
 import numpy
 import time
