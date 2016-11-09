@@ -5,7 +5,6 @@ from database_manager import DatabaseManager
 import cPickle as pickle
 import datetime
 
-# DATABASE_NAME = "fake"
 DATABASE_NAME = "merged"
 READ_ADDRESS = os.path.abspath("../data/"+DATABASE_NAME)
 WRITE_ADDRESS = os.path.abspath("../pdata/%s.rdb"%DATABASE_NAME)

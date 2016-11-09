@@ -6,6 +6,7 @@ import random
 class MomentumReader():
 
 	def __init__(self, dir, classification = True, test_precentage = 0.1, backtest_precentage = 0.1):
+		print("Loading Momentum Database, Please Wait")
 		dir = os.path.abspath(dir)
 		db_path = os.path.join(dir,"momentum.db")
 		# if not os.path.exists(db_path):

@@ -74,12 +74,7 @@ class DLNNWrapper(object):
             write_rows.append("AMR:         "+"".join([str(x)+"," for x in nn.acc_monthly_returns]))
             for row in write_rows:
               write_file.write(row)
-          #current unexecuted file holder params
-          #NOTE initialize ModelFF object with params list
-          #NOTE execute run_model
-          #NOTE run_model model should return list of outputs
-          #NOTE append new line then dictionary line by line to current file
-
+              
 if __name__ == '__main__':
   wrapper = DLNNWrapper()
   wrapper.run("./config")
