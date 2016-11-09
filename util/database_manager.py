@@ -100,6 +100,7 @@ class DatabaseManager:
             return None
 
         all_datas = OrderedDict()
+        # return (id - N + 1) to (id + 1) to include current day
         for xdate,value in values.items()[id-N+1:id+1]:
             all_datas.update({xdate:value})
 

@@ -2,6 +2,7 @@ import momentum_transformer as mt
 import data_reader
 import datetime
 from  database_manager import DatabaseManager
+import warnings
 
 def print_database(db):
     for x in db:
@@ -32,7 +33,7 @@ def test_cal_adr():
         for y in idb[x]:
             for i in range(25):
                 if idb[x][y]["ADR"][i] != i+1:
-                    print("test_cal_adr failed")
+                    assert ValueError("test_cal_adr failed")
                     return False
     return True
 
@@ -57,12 +58,12 @@ def test_cal_amr():
     # print_database(db.stocks)
     idb = {}
     mt.cal_amr(db,idb,12)
-    print_database(idb)
+    # print_database(idb)
 
     v = idb.itervalues().next().itervalues().next()["AMR"]
     for x in range(1,12):
         if v[x-1] != x:
-            print("test cal_amr failed")
+            assert ValueError("test cal_amr failed")
             return False
     print("test cal_amr success")
     return True
@@ -81,8 +82,7 @@ def test_get_monthly_database():
                     db.feed_stock(stock, date, feed_dict)
     db.sort()
     mdb = mt.get_monthly_database(db)
-    print_database(mdb)
-
+    # print_database(mdb)
 
 def test_cal_jan():
     db = DatabaseManager()
@@ -102,7 +102,7 @@ def test_cal_jan():
     idb = mt.cal_jan(idb)
     # print_database(idb)
     if idb.itervalues().next().itervalues().next()["Jan"]!=1:
-        print("test cal_jan failed")
+        assert ValueError("test cal_jan failed")
         return False
     else:
         print("test cal_jan success")
@@ -120,16 +120,21 @@ def test_transform():
                     date = datetime.date(year,month,day)
                     feed_dict = {}
                     count += 1
-                    feed_dict["Close"] = float(count + x + 1)*100
+                    feed_dict["Close"] = float(count - x + 3)*100
                     db.feed_stock(stock, date, feed_dict)
-    # print_database(db.stocks)
     idb = mt.transform(db)
-    print_database(idb)
+    # print_database(idb)
+    date = idb.keys()[0]
+    if idb[date]["C"]["Input"][0] < idb[date]["B"]["Input"][0] or idb[date]["B"]["Input"][0] < idb[date]["A"]["Input"][0]:
+        assert ValueError("test_transform failed")
+        return
+    else:
+        print("test_transform success")
 
 if __name__ == '__main__':
     # db = data_reader.load()
-    # test_cal_amr()
-    # test_get_monthly_database()
-    # test_cal_jan()
+    test_cal_amr()
+    test_get_monthly_database()
+    test_cal_jan()
     test_transform()
 

@@ -253,7 +253,7 @@ def idb_to_odb(idb):
     for date in all_month_dates:
         # in values row is stock, col is value
         values = []
-        astocks = []
+        astocks = list()
         for stock in idb:
             if date in idb[stock]:
                 astocks.append(stock)
@@ -275,6 +275,7 @@ def idb_to_odb(idb):
 
         if date not in odb:
             odb.update({date:{}})
+
         # constrcut the final output
         for m, row in enumerate(values):
             stock = astocks[m]
@@ -285,12 +286,10 @@ def idb_to_odb(idb):
             else:
                 oc = [0,1]
             oc = numpy.array(oc)
-            odb[date].update({stock:{
-                "Input": values[m,:],
-                "Class": oc,
-                "NMR": nmr
-                }})
-
+            odb[date].update({stock:{"Input": values[m,:],
+                                    "Class": oc,
+                                    "NMR": nmr
+                                    }})
     print("Toltal Data Point is %d, Total valid stocks is around %d"%(count, int(count/len(all_month_dates))))
     return odb
 
