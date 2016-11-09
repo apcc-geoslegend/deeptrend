@@ -12,10 +12,26 @@ import numpy
 import time
 import datetime
 
+import dlnn_util
+
 ## TODO:
 ## Better to have a param supper class, but we can do it later
-class DeepLinearNNParams():
-  pass
+class DeepLinearNNParams(object):
+
+  def __init__(self):
+    # NOTE initialize params with default values
+    self.layer = []
+    self.epoch = 0
+    self.batch_size = 0
+    self.learning_rate = 0.0
+    self.optimizer = ''
+    self.classify = True
+    self.test_pct = 0.0
+    self.backtest_pct = 0.0
+    self.buying_pct = 0.0
+    self.loss_func = 'l2_loss'
+    self.activation = 'relu'
+    # NOTE make if elif structure for activation and loss functions
 
 class DeepLinearNN(object):
 
@@ -25,6 +41,7 @@ class DeepLinearNN(object):
   better to have a defined parameters class, then we can set default value in the
   param class
   """
+  
   def __init__(self, params):
     """
     Initializes all hyper parameters and model params
@@ -35,38 +52,46 @@ class DeepLinearNN(object):
     """
 
     #Input parameters
-    self.layers = map(int, params[0])
+    self.layers = params.layers #map(int, params[0])
     print("Using layer:        ",self.layers)
 
-    self.epoch = int(params[1][0])
+    self.epoch = params.epoch #int(params[1][0])
     print("Using epoch:        ",self.epoch)
 
-    self.batch_size = int(params[2][0])
+    self.batch_size = params.batch_size #)int(params[2][0])
     print("Batch size:         ",self.batch_size)
 
-    self.base_learning_rate = float(params[3][0])
+    self.base_learning_rate = params.learning_rate #float(params[3][0])
     print("Base Learning Rate: ", self.base_learning_rate)
 
-    self.optimizer = params[4][0]
+    self.optimizer = params.optimizer #params[4][0]
     print("Using Optimizer:    ", self.optimizer)
 
-    self.classify = params[5][0]
+    self.classify = params.classify #params[5][0]
     print("Claissify:          ", self.classify)
 
-    self.test_pct = float(params[6][0])
+    self.test_pct = params.test_pct #float(params[6][0])
     print("Test Precentage:    ", self.test_pct)
 
-    self.backtest_pct = float(params[7][0])
+    self.backtest_pct = params.backtest_pct #float(params[7][0])
     print("Backtest Precentage:", self.backtest_pct)
 
-    self.buying_precentage = float(params[8][0])
-    print("Buying precentage:  ",self.buying_precentage)
+    self.buying_precentage = params.buying_pct #float(params[8][0])
+    print("Buying precentage:  ", self.buying_precentage)
+
+    self.activation = params.activation
+    print("Activation set as:   ", self.activation)
+
+    self.loss_func = params.loss
+    print("Loss function:   ", self.loss_func)
 
     #Output results
     self.output_accuracy = 0.0
     self.output_loss = 0.0
     self.loss = 0.0
     self.acc_monthly_returns = []
+    self.acc_return = 0.0
+    self.total_time = 0.0
 
   def run_model(self):
     """
@@ -108,14 +133,25 @@ class DeepLinearNN(object):
     weights.append(tf.Variable(tf.truncated_normal([self.layers[-1], output_size])))
     bias.append(tf.Variable(tf.truncated_normal([output_size])))
 
-    # af = lambda x: tf.nn.relu(x)
-    # af = lambda x: tf.nn.relu6(x)
-    # af = lambda x: tf.nn.crelu(x)
-    # af = lambda x: tf.nn.elu(x)
-    # af = lambda x: tf.tanh(x)
-    af = lambda x: tf.sigmoid(x)
-    # af = lambda x: tf.nn.softplus(x)
-    # af = lambda x: tf.nn.softsign(x)
+    if(self.activation == 'relu'):
+      af = lambda x: tf.nn.relu(x)
+    elif(self.activation == 'relu6'):
+      af = lambda x: tf.nn.relu6(x)
+    elif(self.activation == 'crelu'):
+      af = lambda x: tf.nn.crelu(x)
+    elif(self.activation == 'elu'):
+      af = lambda x: tf.nn.elu(x)
+    elif(self.activation == 'tanh'):
+      af = lambda x: tf.tanh(x)
+    elif(self.activation == 'sigmoid'):
+      af = lambda x: tf.sigmoid(x)
+    elif(self.activation == 'softplus'):
+      af = lambda x: tf.nn.softplus(x)
+    elif(self.activation == 'softsign'):
+      af = lambda x: tf.nn.softsign(x)
+    else: #Used for special functions
+      pass
+
     for id in range(len(weights)):
       if id == 0:
         vh = af(tf.matmul(x, weights[id]) + bias[id])
@@ -130,12 +166,20 @@ class DeepLinearNN(object):
     y_ = tf.placeholder(tf.float32, shape=[None, output_size])
 
     # choose the loss function
-    # loss = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y,1e-10,1.0)))
-    # loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(y, y_))
-    # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
-    # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(y, y_))
-    # loss = tf.reduce_mean(tf.nn.log_poisson_loss(y,y_))
-    loss = tf.nn.l2_loss(y - y_)/self.batch_size
+    if(self.loss_func == 'clip_by_value'):
+      loss = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y,1e-10,1.0)))
+    elif(self.loss_func == 'sigmoid_cross_entropy_with_logits'):
+      loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(y, y_))
+    elif(self.loss_func == 'softmax_cross_entropy_with_logits'):
+      loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
+    elif(self.loss_func == 'sparse_softmax_cross_entropy_with_logits'):
+      loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(y, y_))
+    elif(self.loss_func == 'log_poisson_loss'):
+      loss = tf.reduce_mean(tf.nn.log_poisson_loss(y,y_))
+    elif(self.loss_func == 'l2_loss'):
+      loss = tf.nn.l2_loss(y - y_)/self.batch_size
+    else:
+      pass
 
     global_step = tf.Variable(0, dtype=tf.float32)
     # add regularizer
@@ -148,13 +192,13 @@ class DeepLinearNN(object):
     """
     lr_decay = False
     if lr_decay:
-      learning_rate = tf.train.exponential_decay( 
+      learning_rate = tf.train.exponential_decay(
             self.base_learning_rate,        # Base learning rate.
             global_step,                    # Current index into the dataset.
             max_train_steps/self.batch_size,# Decay steps.
             0.96,                           # Decay rate.
             staircase=True)
-    else:  
+    else:
       learning_rate = tf.constant(self.base_learning_rate)
 
     if(self.optimizer == 'gd'):
@@ -204,6 +248,7 @@ class DeepLinearNN(object):
           %(l,lr,operation_precentage,loop_duration,duration))
         print("Estimated time left is: % .2f mins"%(time_left/60))
         print("output sample is ",output[0])
+    self.total_time = time.time()-total_start_time
     print("Total Time Used For Trainning: %f"%(time.time()-total_start_time))
     # log the final loss
     self.loss = l
@@ -222,7 +267,7 @@ class DeepLinearNN(object):
 
     # Backtest
     backtest_input, backtest_output, backtest_value = db.get_backtest_data()
-    acc_return = 0
+    #acc_return = 0
     for date in range(len(backtest_input)):
       input = backtest_input[date]
       num_stock_to_buy = int(self.buying_precentage*len(input))
@@ -233,36 +278,54 @@ class DeepLinearNN(object):
         class1 = output[:,0]
         # argsort the class1
         sort_ids = numpy.argsort(class1)
-        acc_return += numpy.sum(bvalue[sort_ids[-num_stock_to_buy:]])/num_stock_to_buy
-        self.acc_monthly_returns.append(acc_return)
+        self.acc_return += numpy.sum(bvalue[sort_ids[-num_stock_to_buy:]])/num_stock_to_buy
+        self.acc_monthly_returns.append(self.acc_return)
       else:
         sort_ids = numpy.argsort(output)
-        acc_return += numpy.sum(bvalue[sort_ids[0:num_stock_to_buy]])/num_stock_to_buy
-        self.acc_monthly_returns.append(acc_return)
-      print("Accumulated return at month %d is % 3.3f%%"%(date, acc_return))
-    return acc_return
+        self.acc_return += numpy.sum(bvalue[sort_ids[0:num_stock_to_buy]])/num_stock_to_buy
+        self.acc_monthly_returns.append(self.acc_return)
+      print("Accumulated return at month %d is % 3.3f%%"%(date, self.acc_return))
+    return self.acc_return
 
 if __name__ == '__main__':
   #
-  params =[]
-  # layer
-  params.append([100,100,100,100,100])
-  # epoch
-  params.append([500])
-  # batch size
-  params.append([100])
-  # learning rage
-  params.append([0.1])
-  # optimizer
-  params.append(['gd'])
-  # classify
-  params.append([True])
-  # test precentage
-  params.append([0.3])
-  # back test precentage
-  params.append([0.1])
-  # buying precentage
-  params.append([0.01])
-  # run
+  params = DeepLinearNNParams() #Param object
+
+  params.layers = [100, 100, 100, 100, 100]
+  print(params.layers)
+
+  params.epoch = 100
+  print(params.epoch)
+
+  params.batch_size = 1000
+  print(params.batch_size)
+
+  params.learning_rate = 0.1
+  print(params.learning_rate)
+
+  params.optimizer = 'gd'
+  print(params.optimizer)
+
+  params.classify = True
+  print(params.classify)
+
+  params.test_pct = 0.3
+  print(params.test_pct)
+
+  params.backtest_pct = 0.1
+  print(params.backtest_pct)
+
+  params.buying_pct = 0.01
+  print(params.buying_pct)
+
+  params.activation = 'relu'
+  print(params.activation)
+
+  params.loss = 'l2_loss'
+  print(params.loss)
+
   dlnn = DeepLinearNN(params)
-  dlnn.run_model()
+  results = dlnn.run_model()
+
+  #just pass dlnn and you can access all results.
+  dlnn_util.save(params, dlnn, 'results/')
