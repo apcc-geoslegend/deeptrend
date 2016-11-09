@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(".."))
 # from ult.stock_data import StockData
-from ult.momentum_reader import MomentumReader
+from util.momentum_reader import MomentumReader
 import tensorflow as tf
 import numpy
 import time
@@ -41,7 +41,6 @@ class DeepLinearNN(object):
   better to have a defined parameters class, then we can set default value in the
   param class
   """
-  
   def __init__(self, params):
     """
     Initializes all hyper parameters and model params
@@ -163,6 +162,7 @@ class DeepLinearNN(object):
     # y = tf.clip_by_value(y,1e-10,1.0)
     # TBD: whether we want to normalize the output from 0 to 1
     # y = (y - tf.reduce_min(y) + 1e-10)/(tf.reduce_max(y)-tf.reduce_min(y))
+    # y_ is the target
     y_ = tf.placeholder(tf.float32, shape=[None, output_size])
 
     # choose the loss function
@@ -190,15 +190,17 @@ class DeepLinearNN(object):
     @phil,
     here learning rate decay can be another parameter
     """
-    lr_decay = False
+    lr_decay = True
+    # 10 means every 10% decrease once
+    decay_step = max_train_steps/10
     if lr_decay:
-      learning_rate = tf.train.exponential_decay(
+      learning_rate = tf.train.exponential_decay( 
             self.base_learning_rate,        # Base learning rate.
             global_step,                    # Current index into the dataset.
-            max_train_steps/self.batch_size,# Decay steps.
+            decay_step,                     # Decay steps.
             0.96,                           # Decay rate.
             staircase=True)
-    else:
+    else:  
       learning_rate = tf.constant(self.base_learning_rate)
 
     if(self.optimizer == 'gd'):
@@ -244,8 +246,8 @@ class DeepLinearNN(object):
         loop_strat_time = now
         average_loop_time = duration / step
         time_left = average_loop_time * (max_train_steps-step)
-        print("loss: % 2.3f, learning rate: % 2.3f, operation precentage:% 2.2f%% loop time used:% 3.3f, total time used:% 3.3f"
-          %(l,lr,operation_precentage,loop_duration,duration))
+        print("loss: % 2.3f, learning rate: % 2.3f, operation precentage:% 2.2f%% loop time used:% 3.3f, total time used:% 3.3f, global step: %d, maximum step: %d"
+          %(l,lr,operation_precentage,loop_duration,duration,gs,max_train_steps))
         print("Estimated time left is: % .2f mins"%(time_left/60))
         print("output sample is ",output[0])
     self.total_time = time.time()-total_start_time
@@ -271,6 +273,8 @@ class DeepLinearNN(object):
     for date in range(len(backtest_input)):
       input = backtest_input[date]
       num_stock_to_buy = int(self.buying_precentage*len(input))
+      if num_stock_to_buy < 1:
+        num_stock_to_buy = 1
       output = sess.run(y, feed_dict={x:input})
       bvalue = backtest_value[date]
       # print("output of backtest: ", output)
