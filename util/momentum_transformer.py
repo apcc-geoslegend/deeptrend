@@ -39,7 +39,7 @@ def get_monthly_database(db):
 
     @param      db    The database
 
-    @return     The monthly database.
+    @return     mdb   The monthly database.
     """
     """
     The way it finds the next month is ex:
@@ -49,7 +49,7 @@ def get_monthly_database(db):
     {(2006,1,30),"Closed":200}
     """
     # monthly database structs { Stock Name: {Montly Date: {Last Month Value, Current Month Value, Monthly Return} } }
-    monthly_database = OrderedDict()
+    mdb = OrderedDict()
     for stock, stock_value in db.stocks.items():
         last_day = None
         last_day_value = None
@@ -57,8 +57,8 @@ def get_monthly_database(db):
         last_month_value = None
         for date, value in stock_value.items():
             vclose = value["Close"]
-            if stock not in monthly_database:
-                monthly_database.update({stock: OrderedDict()})
+            if stock not in mdb:
+                mdb.update({stock: OrderedDict()})
             if last_month_date is None:
                 last_month_date = date
                 last_month_value = vclose
@@ -68,14 +68,14 @@ def get_monthly_database(db):
                     # get the new month from last day in the daily database
                     new_month_value = last_day_value
                     monthly_return = cal_ar(last_month_value, new_month_value)
-                    monthly_database[stock].update({last_day: {"Last":last_month_value,
-                                                                "Current":new_month_value,
-                                                                "Monthly Return":monthly_return}})
+                    mdb[stock].update({last_day: {"Last":last_month_value,
+                                                    "Current":new_month_value,
+                                                    "Monthly Return":monthly_return}})
                     last_month_date = date
                     last_month_value = new_month_value
             last_day_value = vclose
             last_day = date
-    return monthly_database
+    return mdb
 
 def cal_amr(db, idb, month_range):
     """
@@ -113,16 +113,17 @@ def cal_amr(db, idb, month_range):
                 amr.append(mr)
             if len(amr)!= month_range:
                 print("THIS SHOULD NOT HAPPEN: AMR length not match")
-            idb[stock].update({current_month:{"AMR":amr}})
             next_month_id = sid + month_range
             if next_month_id > len(value)-1:
                 print("THIS SHOULD NOT HAPPEN: Next Month ID greater than it's maximum length")
             next_month = value.items()[next_month_id][0]
             next_month_return = value[next_month]["Monthly Return"]
             # print(base_month, current_month, next_month)
-            
             # NMR stands for Next Month Return
+            idb[stock].update({current_month:{"AMR":amr}})
             idb[stock][current_month]["NMR"] = next_month_return
+            # idb[stock][current_month]["Base Value"] = base_month_value
+            # idb[stock][current_month]["Current Value"] = current_month_value
         if not idb[stock]:
             print("THIS SHOULD NOT HAPPEN: No value found for this stock", stock, len(value))
     return idb
@@ -132,9 +133,9 @@ def filter(db, idb):
     @brief      filter idb by the designed filter
     
     @param      db    The raw database
-    @param      idb   The input database
+    @param      idb   The intermediate database
     
-    @return     the input data base
+    @return     the intermediate database
     """
     # filter idb with designed filter
     print("Applying filters on the data")
@@ -166,10 +167,11 @@ def cal_adr(db, idb, day_range):
     @param      idb        The idb
     @param      day_range  The day range
     
-    @return     the input database
+    @return     the intermediate database
     """
-    for stock, value in idb.items():
-        for month, amr in value.items():
+    print("Calculating Acumulative Daily Return")
+    for stock in idb:
+        for month in idb[stock]:
             data = db.get_last_N_days_data(stock, month, day_range+1)
             if data is None:
                 continue
@@ -195,8 +197,8 @@ def cal_adr(db, idb, day_range):
 
 def cal_jan(idb):
     # calculate the Jan flag
-    for stock, value in idb.items():
-        for date, xvalue in value.items():
+    for stock in idb:
+        for date in idb[stock]:
             if date.month == 1:
                 idb[stock][date]["Jan"] = 1
             else:
@@ -204,6 +206,13 @@ def cal_jan(idb):
     return idb
 
 def idb_to_odb(idb):
+    """
+    @brief      convert intermediate database to output database
+    
+    @param      idb   The idb
+    
+    @return     output database, which constcuted as {date:{stock:{"Input":xx,"Class":xx,"NMR":xx}}}
+    """
     # find all the end dates in the database
     all_month_dates = []
     all_stock_name = []
@@ -213,6 +222,9 @@ def idb_to_odb(idb):
         for date in value:
             if date not in all_month_dates:
                 all_month_dates.append(date)
+
+    if len(all_month_dates) == 0:
+        print("NO valid month found, Something wrong please check")
 
     print("Calculating the Median")
     # find all the meadian in the database
@@ -239,31 +251,32 @@ def idb_to_odb(idb):
     count = 0
     # stock_num = 0
     for date in all_month_dates:
-        # in all_value row is stock, col is value
-        all_value = []
+        # in values row is stock, col is value
+        values = []
         astocks = []
         for stock in idb:
             if date in idb[stock]:
                 astocks.append(stock)
                 value = numpy.array(idb[stock][date]["AMR"] + idb[stock][date]["ADR"] +[idb[stock][date]["Jan"]])
-                all_value.append(value)
+                values.append(value)
                 count += 1
-        if len(all_value) == 1:
+        if len(values) == 1:
             print("Found a date that only have one value",date,stock)
             continue
-        all_value = numpy.array(all_value)
+        values = numpy.array(values)
+        # print(values.shape)
         # z-score is happening here
-        for n, col in enumerate(all_value.T):
-            if n == all_value.shape[1]-1:
+        for n, col in enumerate(values.T):
+            if n == values.shape[1]-1:
                 continue
             mu = numpy.mean(col)
             sigma = numpy.std(col)
-            all_value[:,n] = (col - mu)/sigma
+            values[:,n] = (col - mu)/sigma
 
         if date not in odb:
             odb.update({date:{}})
         # constrcut the final output
-        for m, row in enumerate(all_value):
+        for m, row in enumerate(values):
             stock = astocks[m]
             median = medians[date]
             nmr = idb[stock][date]["NMR"]
@@ -273,11 +286,12 @@ def idb_to_odb(idb):
                 oc = [0,1]
             oc = numpy.array(oc)
             odb[date].update({stock:{
-                "Input": all_value[m,:],
+                "Input": values[m,:],
                 "Class": oc,
                 "NMR": nmr
                 }})
-    print("Toltal Data Point is %d, Total valid stocks is around %d"%(count, int(count/len(all_month_dates))) )
+
+    print("Toltal Data Point is %d, Total valid stocks is around %d"%(count, int(count/len(all_month_dates))))
     return odb
 
 def transform(db):
@@ -292,6 +306,7 @@ def transform(db):
     """
     print("Processing Data, Please wait")
     mdb = get_monthly_database(db)
+    # idb is intermediate database
     # idb contains { stock_name: {monthly_date: {"AMR:[12 accumulative monthly return], "ADR":[20 days dialy return]} } }
     idb = {}
     # calculate the 12 month momentum
@@ -301,7 +316,6 @@ def transform(db):
     # apply the filter after it calculate the month return
     filter(db, idb)
 
-    print("Calculating Acumulative Daily Return")
     # for every idb month calculate it's 20 days return
     # idb contains { stock_name: {monthly_date:[12 accumulative monthly return] } }
     day_range = 20
@@ -311,17 +325,17 @@ def transform(db):
     del db
     # calculate january flag
     cal_jan(idb)
-    # input database to output database
+    # intermediate database to output database
+    # odb constcuted as {date:{stock:{"Input":xx,"Class":xx,"NMR":xx}}}
     odb = idb_to_odb(idb)
 
     return odb
 
-INPUT_ADDRESS = os.path.abspath("../pdata/nyse.rdb")
 OUTPUT_ADDRESS = os.path.abspath("../pdata/momentum.db")
-import nyse_reader as data_reader
+import data_reader
 from database_manager import DatabaseManager 
 
-def generate_database(input_address = INPUT_ADDRESS, output_address = OUTPUT_ADDRESS):
+def generate_database(output_address = OUTPUT_ADDRESS):
     """
     @brief      A higher level wrapper for generating the database
     
@@ -335,6 +349,7 @@ def generate_database(input_address = INPUT_ADDRESS, output_address = OUTPUT_ADD
     if data_reader.database_exsists():
         db = data_reader.load()
     else:
+        # to save time, generate database won't save the raw database
         db = data_reader.generate_database()
 
     odb = transform(db)

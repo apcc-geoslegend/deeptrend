@@ -1,5 +1,6 @@
 import csv
 import os.path
+import sys
 from database_manager import DatabaseManager
 import cPickle as pickle
 import datetime
@@ -43,7 +44,7 @@ def feed_data(db, dir):
                             col_unadjusted_close = id
                         if col == 'total_volume':
                             col_total_volume = id
-    print(col_close,col_unadjusted_close,col_total_volume)
+    # print(col_close,col_unadjusted_close,col_total_volume)
     for file in data_files:
         if file == "0.HEADER.csv":
             continue
@@ -53,23 +54,40 @@ def feed_data(db, dir):
         with open(file_path,'rt') as file:
             reader = csv.reader(file)
             for row in reader:
-                date = row[0]
-                ids = [i for i in range(len(date)) if date[i] == "/"]
-                year = int(date[0:ids[0]])
-                month = int(date[ids[0]+1:ids[1]])
-                day = int(date[ids[1]+1:])
-                # print(year,month,day)
-                date = datetime.date(year,month,day)
+                feed_dict = {}
+                date = parse_date(row[0])
                 vclose = float(row[col_close])
-                vuclose = float(row[col_unadjusted_close])
+                feed_dict['Close'] = vclose
+                # vuclose = float(row[col_unadjusted_close])
+                # feed_dict['Unadjusted Close'] = vuclose
                 volume = float(row[col_total_volume])
-                db.feed_current_stock(date,{'Close':vclose, 'Unadjusted Close':vuclose, 'Volume':volume})
+                feed_dict['Volume'] = volume
+                db.feed_current_stock(date,feed_dict)
             count += 1
             # if count > 1000:
             #   break
     # db.sort()
     print("added row database, total %d stocks"%count)
     return db
+
+def parse_date(string):
+    """
+    @brief      parse a string into date, the format of the string should be year/month/day
+    
+    @param      string  The string
+    
+    @return     { description_of_the_return_value }
+    """
+    ids = [i for i in range(len(string)) if string[i] == "/"]
+    if len(ids) < 2:
+        print("Date format of this data is wrong, plase use year/month/day")
+        sys.exit(0)
+    year = int(string[0:ids[0]])
+    month = int(string[ids[0]+1:ids[1]])
+    day = int(string[ids[1]+1:])
+    # print(year,month,day)
+    date = datetime.date(year,month,day)
+    return date
 
 def load():
     if database_exsists():

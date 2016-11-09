@@ -86,18 +86,21 @@ class DatabaseManager:
 
     def get_last_N_days_data(self,stock,date,N):
         if stock not in self.stocks:
+            print("Can't find this stock in database")
             return None
         
         values = self.stocks[stock]
         if date not in values:
+            print("Can't find this date in database")
             return None
 
         id = values.keys().index(date)
         if (id - N)<0: # not enough data
+            print("Not enough data in database")
             return None
 
         all_datas = OrderedDict()
-        for xdate,value in values.items()[id-N:id]:
+        for xdate,value in values.items()[id-N+1:id+1]:
             all_datas.update({xdate:value})
 
         # all_datas = OrderedDict(sorted(all_datas.items(), key=itemgetter(0)))
@@ -134,7 +137,7 @@ class DatabaseManager:
     def feed_stock(self, stock_name, date, value):
         if stock_name not in self.stocks:
             self.stocks.update({stock_name:OrderedDict()})
-        self.stocks[stock_name].update({date: value})
+        self.stocks[stock_name][date] = value
 
 if __name__ == '__main__':
     pass

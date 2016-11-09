@@ -112,8 +112,8 @@ class DeepLinearNN(object):
     # af = lambda x: tf.nn.relu6(x)
     # af = lambda x: tf.nn.crelu(x)
     # af = lambda x: tf.nn.elu(x)
-    # af = lambda x: tf.tanh(x)
-    af = lambda x: tf.sigmoid(x)
+    af = lambda x: tf.tanh(x)
+    # af = lambda x: tf.sigmoid(x)
     # af = lambda x: tf.nn.softplus(x)
     # af = lambda x: tf.nn.softsign(x)
     for id in range(len(weights)):
@@ -132,11 +132,11 @@ class DeepLinearNN(object):
 
     # choose the loss function
     # loss = -tf.reduce_sum(y_*tf.log(tf.clip_by_value(y,1e-10,1.0)))
-    loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(y, y_))
+    # loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(y, y_))
     # loss = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_))
     # loss = tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(y, y_))
     # loss = tf.reduce_mean(tf.nn.log_poisson_loss(y,y_))
-    # loss = tf.nn.l2_loss(y - y_)/self.batch_size
+    loss = tf.nn.l2_loss(y - y_)/self.batch_size
 
     global_step = tf.Variable(0, dtype=tf.float32)
     # add regularizer
@@ -230,6 +230,8 @@ class DeepLinearNN(object):
     for date in range(len(backtest_input)):
       input = backtest_input[date]
       num_stock_to_buy = int(self.buying_precentage*len(input))
+      if num_stock_to_buy < 1:
+        num_stock_to_buy = 1
       output = sess.run(y, feed_dict={x:input})
       bvalue = backtest_value[date]
       # print("output of backtest: ", output)
@@ -254,11 +256,11 @@ if __name__ == '__main__':
   # epoch
   params.append([100])
   # batch size
-  params.append([1000])
+  params.append([100])
   # learning rage
-  params.append([1])
+  params.append([10])
   # optimizer
-  params.append(['gd'])
+  params.append(['m'])
   # classify
   params.append([True])
   # test precentage
