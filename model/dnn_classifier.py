@@ -56,11 +56,12 @@ classifier = tf.contrib.learn.DNNClassifier(feature_columns=feature_columns,
                                             hidden_units=[40, 20, 10],
                                             n_classes=2,
                                             dropout=0.5,
+                                            activation_fn=tf.nn.sigmoid,
                                             model_dir=model_dir)
 
 # Fit model.
 print("Start to train the model")
-classifier.fit(x=trX, y=trY, steps=100000, batch_size=20000)
+classifier.fit(x=trX, y=trY, steps=300000, batch_size=10000)
 
 # Evaluate accuracy.
 accuracy_score = classifier.evaluate(x=teX,
