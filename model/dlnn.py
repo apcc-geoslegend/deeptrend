@@ -137,8 +137,8 @@ class DeepLinearNN(object):
 
     global_step = tf.Variable(0, dtype=tf.float32)
     # add regularizer
-    regularizers = tf.reduce_mean([tf.nn.l2_loss(w) for w in weights] + [tf.nn.l2_loss(b) for b in bias])
-    loss += 5e-4 * regularizers
+    regularizers = tf.reduce_mean([tf.nn.l2_loss(w) for w in weights] + [tf.nn.l2_loss(b) for b in bias]) * 1e-6
+    rloss = loss + regularizers
 
     lr_decay = True
     # 10 means every 10% decrease once
@@ -154,21 +154,21 @@ class DeepLinearNN(object):
       learning_rate = tf.constant(params.base_learning_rate)
 
     if(params.optimizer == 'gd'):
-      train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss, global_step=global_step)
+      train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(rloss, global_step=global_step)
     elif(params.optimizer == 'ad'):
-      train_step = tf.train.AdadeltaOptimizer(learning_rate, 0.9).minimize(loss,global_step=global_step)
+      train_step = tf.train.AdadeltaOptimizer(learning_rate, 0.9).minimize(rloss,global_step=global_step)
     elif(params.optimizer == 'ag'):
-      train_step = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
+      train_step = tf.train.AdagradOptimizer(learning_rate).minimize(rloss, global_step=global_step)
     elif(params.optimizer == 'agd'):
-      train_step = tf.train.AdagradDAOptimizer(learning_rate, global_step=global_step).minimize(loss)
+      train_step = tf.train.AdagradDAOptimizer(learning_rate, global_step=global_step).minimize(rloss)
     elif(params.optimizer == 'm'):
-      train_step = tf.train.MomentumOptimizer(learning_rate, 0.9).minimize(loss, global_step=global_step)
+      train_step = tf.train.MomentumOptimizer(learning_rate, 0.9).minimize(rloss, global_step=global_step)
     elif(params.opitimizer == 'ao'):
-      train_step = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
+      train_step = tf.train.AdamOptimizer(learning_rate).minimize(rloss, global_step=global_step)
     elif(params.optimizer == 'fo'):
-      train_step = tf.train.FtrlOptimizer(learning_rate).minimize(loss, global_step=global_step)
+      train_step = tf.train.FtrlOptimizer(learning_rate).minimize(rloss, global_step=global_step)
     elif(params.optimizer == 'rpo'):
-      train_step = tf.train.RMSPropOptimizer(learning_rate).minimize(loss ,global_step=global_step)
+      train_step = tf.train.RMSPropOptimizer(learning_rate).minimize(rloss ,global_step=global_step)
     else: #NOTE Specialty optimizer to try out here
       pass
 
@@ -187,8 +187,9 @@ class DeepLinearNN(object):
     tf.initialize_all_variables().run()
     for step in xrange(max_train_steps):
       batch_xs, batch_ys = db.next_batch(params.batch_size)
-      opout,l,lr,gs,output = sess.run([train_step,loss,learning_rate,global_step,y], feed_dict={x: batch_xs, y_: batch_ys})
+      sess.run([train_step], feed_dict={x: batch_xs, y_: batch_ys})
       if step%evaluation_frequency == 1:
+        l,lr,gs,output,rlo = sess.run([loss,learning_rate,global_step,y,rloss], feed_dict={x: batch_xs, y_: batch_ys})
         now = time.time()
         duration = now - total_start_time
         loop_duration = now - loop_strat_time
@@ -196,10 +197,12 @@ class DeepLinearNN(object):
         loop_strat_time = now
         average_loop_time = duration / step
         time_left = average_loop_time * (max_train_steps-step)
-        print("loss: % 2.3f, learning rate: % 2.3f, operation precentage:% 2.2f%% loop time used:% 3.3f, total time used:% 3.3f, global step: %d, maximum step: %d"
-          %(l,lr,operation_precentage,loop_duration,duration,gs,max_train_steps))
+        print("loss: % 2.3f, rloss % 2.3f, learning rate: % 2.3f, "\
+          "operation precentage:% 2.2f%% loop time used:% 3.3f, total time used:% 3.3f, global step: %d, maximum step: %d"
+          %(l,rlo,lr,operation_precentage,loop_duration,duration,gs,max_train_steps))
         print("Estimated time left is: % .2f mins"%(time_left/60))
         print("output sample is ",output[0])
+        print("Target Output is ", batch_ys[0])
     total_time_used = time.time()-total_start_time
     print("Total Time Used For Trainning: %f"%total_time_used)
     # log the final loss
@@ -250,8 +253,8 @@ class DeepLinearNN(object):
 if __name__ == '__main__':
   #
   params = DeepLinearNNParams() #Param object
-  params.layers = [100, 100, 100, 100, 100]
-  params.epoch = 1
+  params.layers = [40, 4, 50]
+  params.epoch = 100
   params.batch_size = 100
   params.learning_rate = 0.1
   params.optimizer = 'gd'
@@ -260,7 +263,7 @@ if __name__ == '__main__':
   params.backtest_pct = 0.1
   params.buying_pct = 0.01
   params.activation = 'sigmoid'
-  params.loss = 'l2_loss'
+  params.loss_func = 'softmax_cross_entropy_with_logits'
 
   dlnn = DeepLinearNN()
   results = dlnn.run_model(params)

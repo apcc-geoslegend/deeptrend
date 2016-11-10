@@ -5,7 +5,10 @@ import random
 
 class MomentumReader():
 
-	def __init__(self, dir, classification = True, test_precentage = 0.1, backtest_precentage = 0.1):
+	def data_type(self):
+		return numpy.float32
+
+	def __init__(self, dir, classification = True, test_precentage = 0.1, validation_precentage = 0.1, backtest_precentage = 0.1, hot_vector = False):
 		print("Loading Momentum Database, Please Wait")
 		dir = os.path.abspath(dir)
 		db_path = os.path.join(dir,"momentum.db")
@@ -30,8 +33,14 @@ class MomentumReader():
 		else:
 			self.output_token = "NMR"
 		self.input_size = len(db[self.all_dates[0]][self.all_stocks[0]][self.input_token])
-		self.output_size = len(db[self.all_dates[0]][self.all_stocks[0]][self.output_token])
+		self.num_classes = len(db[self.all_dates[0]][self.all_stocks[0]][self.output_token])
 
+		if not hot_vector:
+			self.output_size = 1
+		else:
+			self.output_size = self.num_classes
+
+		# validation_start_id = int(len(self.all_dates)*(1 - test_precentage - backtest_precentage - validation_precentage))
 		test_start_id = int(len(self.all_dates)*(1 - test_precentage - backtest_precentage)) 
 		backtest_start_id = int(len(self.all_dates)*(1 - backtest_precentage))
 		self.train_input = []
@@ -54,6 +63,12 @@ class MomentumReader():
 			for stock in db[date]:
 				ainput = db[date][stock][self.input_token]
 				aoutput = db[date][stock][self.output_token]
+				if not hot_vector:
+					if aoutput[0] == 1:
+						newop = 0
+					else:
+						newop = 1
+					aoutput = newop
 				avalue = db[date][stock]["NMR"]
 				if test:
 					self.test_input.append(ainput)
@@ -66,11 +81,24 @@ class MomentumReader():
 					self.train_input.append(ainput)
 					self.train_output.append(aoutput)
 			if backtest:
-				self.backtest_input[-1]  = numpy.array(self.backtest_input[-1])
-				self.backtest_output[-1] = numpy.array(self.backtest_output[-1])
-				self.backtest_value[-1]  = numpy.array(self.backtest_value[-1])
-		self.train_size = len(self.train_input)
+				self.backtest_input[-1]  = numpy.array(self.backtest_input[-1],dtype=self.data_type())
+				self.backtest_output[-1] = numpy.array(self.backtest_output[-1],numpy.int)
+				self.backtest_value[-1]  = numpy.array(self.backtest_value[-1],dtype=self.data_type())
+
 		self.shuffle()
+		# get validataion data
+		if validation_precentage > 0:
+			validation_number = int(len(self.train_input)*validation_precentage)
+			self.validataion_input = self.train_input[0:validation_number]
+			self.validataion_output = self.train_output[0:validation_number]
+			# cut off that part of validataion data
+			self.train_input = self.train_input[validation_number:]
+			self.train_output = self.train_output[validation_number:]
+		else:
+			self.validataion_input = None
+			self.validataion_output = None
+		# calculate final trainning data size
+		self.train_size = len(self.train_input)
 
 	def shuffle(self):
 		ids = range(len(self.train_input))
@@ -81,6 +109,9 @@ class MomentumReader():
 	def get_input_size(self):
 		return self.input_size
 	
+	def get_number_classes(self):
+		return self.num_classes
+
 	def get_output_size(self):
 		return self.output_size
 
@@ -96,6 +127,20 @@ class MomentumReader():
 	def get_backtest_data_size(self):
 		return len(self.backtest_input)
 
+	def get_all_train_data(self):
+		input = numpy.array(self.train_input,self.data_type())
+		output = numpy.array(self.train_output,numpy.int)
+		output = output.reshape(output.shape[0],)
+		return input,output
+
+	def get_validation_data(self):
+		if self.validataion_input is None:
+			return None,None
+		input = numpy.array(self.validataion_input,self.data_type())
+		output = numpy.array(self.validataion_output,numpy.int)
+		output = output.reshape(output.shape[0],)
+		return input, output
+
 	def next_batch(self, num):
 
 		# self.shuffle()
@@ -107,13 +152,14 @@ class MomentumReader():
 			end_id = num
 		self.current_id = end_id
 		assert num == (end_id - start_id)
-		input = numpy.array(self.train_input[start_id:end_id])
-		output = numpy.array(self.train_output[start_id:end_id])
+		input = numpy.array(self.train_input[start_id:end_id],self.data_type())
+		output = numpy.array(self.train_output[start_id:end_id],numpy.int)
 		return input, output
 
 	def get_test_data(self):
-		input = numpy.array(self.test_input)
-		output = numpy.array(self.test_output)
+		input = numpy.array(self.test_input,self.data_type())
+		output = numpy.array(self.test_output,numpy.int)
+		output = output.reshape(output.shape[0],)
 		return input, output
 
 	def get_backtest_data(self):
