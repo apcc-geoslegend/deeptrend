@@ -7,6 +7,9 @@ import data_reader
 DATABASE_NAME = data_reader.DATABASE_NAME
 DATABASE_PATH = os.path.abspath("../pdata/%s.db"%DATABASE_NAME)
 class MomentumReader():
+	"""
+	This class is ussed for reading the momentum database
+	"""
 
 	def data_type(self):
 		return numpy.float32
@@ -33,7 +36,7 @@ class MomentumReader():
 		if classification:
 			self.output_token = "Class"
 		else:
-			self.output_token = "NMR"
+			self.output_token = "NNMR"
 		self.input_size = len(db[self.all_dates[0]][self.all_stocks[0]][self.input_token])
 		self.num_classes = len(db[self.all_dates[0]][self.all_stocks[0]][self.output_token])
 
@@ -84,7 +87,7 @@ class MomentumReader():
 					self.train_output.append(aoutput)
 			if backtest:
 				self.backtest_input[-1]  = numpy.array(self.backtest_input[-1],dtype=self.data_type())
-				self.backtest_output[-1] = numpy.array(self.backtest_output[-1],numpy.int)
+				self.backtest_output[-1] = numpy.array(self.backtest_output[-1])
 				self.backtest_value[-1]  = numpy.array(self.backtest_value[-1],dtype=self.data_type())
 
 		self.shuffle()
@@ -132,19 +135,19 @@ class MomentumReader():
 
 	def get_all_train_data(self):
 		input = numpy.array(self.train_input,self.data_type())
-		output = numpy.array(self.train_output,numpy.int)
+		output = numpy.array(self.train_output)
 		return input,output
 
 	def get_validation_data(self):
 		if self.validataion_input is None:
 			return None,None
 		input = numpy.array(self.validataion_input,self.data_type())
-		output = numpy.array(self.validataion_output,numpy.int)
+		output = numpy.array(self.validataion_output)
 		return input, output
 
 	def get_test_data(self):
 		input = numpy.array(self.test_input,self.data_type())
-		output = numpy.array(self.test_output,numpy.int)
+		output = numpy.array(self.test_output)
 		return input, output
 
 	def get_backtest_data(self):
@@ -165,7 +168,7 @@ class MomentumReader():
 		self.current_id = end_id
 		assert num == (end_id - start_id)
 		input = numpy.array(self.train_input[start_id:end_id],self.data_type())
-		output = numpy.array(self.train_output[start_id:end_id],numpy.int)
+		output = numpy.array(self.train_output[start_id:end_id])
 		return input, output
 
 if __name__ == '__main__':

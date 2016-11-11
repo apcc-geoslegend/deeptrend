@@ -252,38 +252,44 @@ def idb_to_odb(idb, z_score=False):
     # stock_num = 0
     for date in all_month_dates:
         # in values row is stock, col is value
-        values = []
+        vinputs = []
+        nnmrs = []
         astocks = list()
         for stock in idb:
             if date in idb[stock]:
                 astocks.append(stock)
-                value = numpy.array(idb[stock][date]["AMR"] + idb[stock][date]["ADR"] +[idb[stock][date]["Jan"]])
-                values.append(value)
+                vinput = numpy.array(idb[stock][date]["AMR"] + idb[stock][date]["ADR"] +[idb[stock][date]["Jan"]])
+                nnmrs.append(idb[stock][date]["NMR"])
+                vinputs.append(vinput)
                 count += 1
-        if len(values) == 1:
+        if len(vinputs) == 1:
             print("Found a date that only have one value",date,stock)
             continue
-        values = numpy.array(values)
-        # print(values.shape)
-        # z-score is happening here
-        for n, col in enumerate(values.T):
-            if n == values.shape[1]-1:
+        nnmrs = numpy.array(nnmrs)
+        maxima = numpy.max(nnmrs)
+        minima = numpy.min(nnmrs)
+        nnmrs = (nnmrs - minima + 1e-3)/(maxima - minima + 1e-3)
+        # normalization is happening here
+        vinputs = numpy.array(vinputs)
+        for n, col in enumerate(vinputs.T):
+            if n == vinputs.shape[1]-1:
                 continue
+            # z-score is happening here
             if z_score:
                 mu = numpy.mean(col)
                 sigma = numpy.std(col)
-                values[:,n] = (col - mu)/sigma
+                vinputs[:,n] = (col - mu)/sigma
             else:
                 # min max normalization
-                min = numpy.min(col)
-                max = numpy.max(col)
-                values[:,n] = (col - min + 1e-3)/(max - min + 1e-3)
+                minima = numpy.min(col)
+                maxima = numpy.max(col)
+                vinputs[:,n] = (col - minima + 1e-3)/(maxima - minima + 1e-3)
 
         if date not in odb:
             odb.update({date:{}})
 
         # constrcut the final output
-        for m, row in enumerate(values):
+        for m, row in enumerate(vinputs):
             stock = astocks[m]
             median = medians[date]
             nmr = idb[stock][date]["NMR"]
@@ -292,9 +298,10 @@ def idb_to_odb(idb, z_score=False):
             else:
                 oc = [0,1]
             oc = numpy.array(oc)
-            odb[date].update({stock:{"Input": values[m,:],
+            odb[date].update({stock:{"Input": vinputs[m,:],
                                     "Class": oc,
-                                    "NMR": nmr
+                                    "NMR": nmr,
+                                    "NNMR": nnmrs[m]
                                     }})
     print("Toltal Data Point is %d, Total valid stocks is around %d"%(count, int(count/len(all_month_dates))))
     return odb
@@ -352,12 +359,7 @@ def generate_database(output_address = OUTPUT_ADDRESS):
     """
     
     save_dir = os.path.abspath(output_address)
-    if data_reader.database_exsists():
-        db = data_reader.load()
-    else:
-        # to save time, generate database won't save the raw database
-        db = data_reader.generate_database()
-
+    db = data_reader.load()
     odb = transform(db)
     output_file = open(save_dir,'wb')
     print("Saving Database, Please Wait")

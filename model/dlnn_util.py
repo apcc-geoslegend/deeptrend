@@ -2,6 +2,89 @@ import sys
 import os.path
 import time
 import datetime
+import tensorflow as tf
+
+class DeepLinearNNParams():
+
+  def __init__(self):
+    # NOTE initialize params with default values
+    self.layer = [100,100,100]
+    self.epoch = 100
+    self.batch_size = 100
+    self.base_learning_rate = 0.1
+    self.optimizer = 'gd'
+    self.classification = True
+    self.test_pct = 0.3
+    self.backtest_pct = 0.1
+    self.buying_pct = 0.01
+    self.loss_func = 'sigmoid'
+    self.activation = 'relu'
+    self.dropout = 0.5
+    self.opt_dict = {
+      "gd": tf.train.GradientDescentOptimizer(self.base_learning_rate),
+      "add": tf.train.AdadeltaOptimizer(self.base_learning_rate, 0.9),
+      "adg": tf.train.AdagradOptimizer(self.base_learning_rate),
+      "mome": tf.train.MomentumOptimizer(self.base_learning_rate, 0.9),
+      "adam": tf.train.AdamOptimizer(self.base_learning_rate),
+      "ftrl": tf.train.FtrlOptimizer(self.base_learning_rate),
+      "rms": tf.train.RMSPropOptimizer(self.base_learning_rate)
+      }
+    self.af_dict = {
+      "relu":     tf.nn.relu,
+      "relu6":    tf.nn.relu6,
+      'crelu':    tf.nn.crelu,
+      'elu':      tf.nn.elu,
+      'tanh':     tf.tanh,
+      'sigmoid':  tf.sigmoid,
+      'softplus': tf.nn.softplus,
+      'softsign': tf.nn.softsign
+    }
+    self.loss_dict = {
+      'sigmoid':
+        lambda y,y_: tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(y, y_)),
+      'softmax':
+        lambda y,y_: tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(y, y_)),
+      'sparse_softmax':
+        lambda y,y_: tf.reduce_mean(tf.nn.sparse_softmax_cross_entropy_with_logits(y, y_)),
+      'log_poisson':
+        lambda y,y_: tf.reduce_mean(tf.nn.log_poisson_loss(y,y_)),
+      'l2':
+        lambda y,y_: tf.nn.l2_loss(y - y_)/self.batch_size
+    }
+
+    if self.optimizer not in self.opt_dict:
+      raise KeyError("ERROR: Can't find this optimizer %s"%self.optimizer)
+    
+    if self.activation not in self.af_dict:
+      raise KeyError("ERROR: Can't find this activation function %s"%self.activation)
+
+    if self.loss_func not in self.loss_dict:
+      raise KeyError("ERROR: Can't find this loss function %s"%self.loss_func)
+
+  def __str__(self):
+    string = "This Parameters is:     \n"
+    string += ("Layer:              %s\n"%str(self.layers))
+    string += ("Epoch:              %d\n"%self.epoch)
+    string += ("Batch size:         %d\n"%self.batch_size)
+    string += ("Base Learning Rate: %f\n"%self.base_learning_rate)
+    string += ("Optimizer:          %s\n"%str(self.optimizer))
+    string += ("Claissify:          %s\n"%str(self.classify))
+    string += ("Test Precentage:    %f\n"%self.test_pct)
+    string += ("Backtest Precentage:%f\n"%self.backtest_pct)
+    string += ("Buying precentage:  %f\n"%self.buying_pct)
+    string += ("Activation set as:  %s\n"%str(self.activation))
+    string += ("Loss function:      %s"%str(self.loss_func))
+    # NOTE make if elif structure for activation and loss functions
+    return string
+
+  def get_optimizer(self):
+    return self.opt_dict[self.optimizer]
+
+  def get_activation_function(self):
+    return self.af_dict[self.activation]
+
+  def get_loss_function(self):
+    return self.loss_dict[self.loss_func]
 
 def save(params, result, file_path):
   """

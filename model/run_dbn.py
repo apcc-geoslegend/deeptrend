@@ -1,3 +1,6 @@
+# this file runs the deep belief network from yadlt
+# need to install yadlt first
+# sudo pip install yadlt
 import sys
 import os
 sys.path.insert(0, os.path.abspath(".."))
@@ -109,7 +112,7 @@ if __name__ == '__main__':
     # else:
     #     trX, trY, vlX, vlY, teX, teY = None, None, None, None, None, None
 
-    mr = MomentumReader("../pdata/")
+    mr = MomentumReader(test_precentage=0.3, validation_precentage=0.1)
     trX, trY = mr.get_all_train_data()
     vlX, vlY = mr.get_validation_data()
     teX, teY = mr.get_test_data()

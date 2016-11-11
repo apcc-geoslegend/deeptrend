@@ -11,7 +11,7 @@ DATABASE_NAME = "NASDAQ30"
 READ_ADDRESS = os.path.abspath("../data/"+DATABASE_NAME)
 WRITE_ADDRESS = os.path.abspath("../pdata/%s.rdb"%DATABASE_NAME)
 
-def database_exsists():
+def database_exsits():
     if os.path.exists(WRITE_ADDRESS):
         return True
     else:
@@ -91,13 +91,14 @@ def parse_date(string):
     return date
 
 def load():
-    if database_exsists():
+    if database_exsits():
         file = open(WRITE_ADDRESS, 'rb')
         print("Loading Database, Please Wait")
         db = pickle.load(file)
         return db
     else:
-        return None
+        db = generate_database()
+        return db
 
 def generate_database(read_address = READ_ADDRESS, write_address = WRITE_ADDRESS):
     db = DatabaseManager()

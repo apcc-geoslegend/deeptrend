@@ -4,96 +4,105 @@ from __future__ import print_function
 
 import tensorflow as tf
 import numpy
-
 import sys
 import os
+import time
 sys.path.insert(0, os.path.abspath(".."))
 from util.momentum_reader import MomentumReader
+import dlnn_util
 
-# # Data sets
-# IRIS_TRAINING = "../data/iris_training.csv"
-# IRIS_TEST = "../data/iris_test.csv"
+def main(params):
+  classification = params.classification
+  db = MomentumReader(classification=classification, test_precentage=params.test_pct, validation_precentage=0, backtest_precentage=params.backtest_pct)
+  trX, trY = db.get_all_train_data()
+  vlX, vlY = db.get_validation_data()
+  teX, teY = db.get_test_data()
+  print("Number of Classes is :",db.get_number_classes())
+  print("Input size is ", db.get_input_size())
 
-# # Load datasets.
-# training_set = tf.contrib.learn.datasets.base.load_csv_with_header(
-#     filename=IRIS_TRAINING,
-#     target_dtype=np.int,
-#     features_dtype=np.float32)
-# test_set = tf.contrib.learn.datasets.base.load_csv_with_header(
-#     filename=IRIS_TEST,
-#     target_dtype=np.int,
-#     features_dtype=np.float32)
+  model_dir = os.path.abspath("/tmp/stock")
+  optimizer = params.get_optimizer()
+  af = params.get_activation_function()
+  layers = params.layers
 
+  # Build 3 layer DNN with 10, 20, 10 units respectively.
+  feature_columns = tf.contrib.learn.infer_real_valued_columns_from_input(trX)
+  if classification:
+    NN = tf.contrib.learn.DNNClassifier(
+      feature_columns=feature_columns,
+      hidden_units=layers,
+      n_classes=db.get_number_classes(),
+      dropout=params.dropout,
+      activation_fn=af,
+      optimizer=optimizer,
+      model_dir=model_dir)
+  else:
+    NN = tf.contrib.learn.DNNRegressor(
+      feature_columns=feature_columns,
+      hidden_units=layers,
+      dropout=params.dropout,
+      activation_fn=af,
+      optimizer=optimizer,
+      model_dir=model_dir)
 
-# print(training_set.data.shape)
-# print(training_set.target.shape)
-# print(test_set.data.shape)
-# print(test_set.target.shape)
+  start_time = time.time()
+  # Fit model.
+  print("Start to train the model")
+  NN.fit(x=trX, y=trY, steps=params.epoch, batch_size=params.batch_size)
 
-db = MomentumReader(test_precentage=0.3, validation_precentage=0)
-trX, trY = db.get_all_train_data()
-vlX, vlY = db.get_validation_data()
-teX, teY = db.get_test_data()
-# print("trX:",trX.shape,"trY", trY.shape)
-# print("teX:",teX.shape,"teY", teY.shape)
-print("Number of Classes is :",db.get_number_classes())
-print("Input size is ", db.get_input_size())
-model_dir = os.path.abspath("/tmp/stock")
+  # Evaluate accuracy.
+  if classification:
+    accuracy_score = NN.evaluate(x=teX, y=teY)["accuracy"]
+    print('Accuracy: {0:f}'.format(accuracy_score))
+  else:
+    score = NN.evaluate(x=teX, y=teY)["loss"]
+    print('Score: {0:f}'.format(accuracy_score))
+    
+  # Backtest
+  backtest_input, backtest_output, backtest_value = db.get_backtest_data()
+  acc_return = 0
+  amrs = [] # acumulated montly return
+  for date in range(len(backtest_input)):
+    vinput = backtest_input[date]
+    num_stock_to_buy = int(params.buying_pct*len(vinput))
+    if num_stock_to_buy < 1:
+      num_stock_to_buy = 1
 
-# if tf.gfile.Exists(model_dir):
-#   tf.gfile.DeleteRecursively(model_dir)
-# tf.gfile.MakeDirs(model_dir)
+    bvalue = backtest_value[date]
+    output = NN.predict_proba(x=vinput)
+    output_list = []
+    for a in output:
+      output_list.append(a)
+    output = numpy.array(output_list)
+    if classification:
+      # argsort the class1
+      sort_ids = numpy.argsort(output[:,0])
+    else:
+      sort_ids = numpy.argsort(output)
+    acc_return += numpy.sum(bvalue[sort_ids[-num_stock_to_buy:]])/num_stock_to_buy
+    amrs.append(acc_return)
+    print("Accumulated return at month %d is % 3.3f%%"%(date, acc_return))
+  print('AMRS:',amrs)
+  result = {}
+  result["Total Time"] = time.time()-start_time
+  result["Accuracy"] = accuracy_score
+  result["AMR"] = amrs
+  result["Loss"] = NN.get_variable_value('loss')
 
-feature_columns = tf.contrib.learn.infer_real_valued_columns_from_input(trX)
+if __name__ == '__main__':
+  params = dlnn_util.DeepLinearNNParams()
+  params.layers = [40, 4, 50]
+  params.epoch = 300000
+  params.batch_size = 100
+  params.base_learning_rate = 0.1
+  # gd add adg mome adam ftrl rms
+  params.optimizer = 'add'
+  params.classification = True
+  params.test_pct = 0.3
+  params.backtest_pct = 0.1
+  params.buying_pct = 0.01
+  params.activation = 'relu'
+  params.dropout = 0.5
+  params.loss_func = 'sigmoid'
 
-optimizer = tf.train.AdadeltaOptimizer(learning_rate=0.1)
-# optimizer = tf.train.ProximalAdagradOptimizer(learning_rate=0.1,l1_regularization_strength=0.001)
-
-af = tf.nn.sigmoid
-# af = tf.nn.relu
-
-# Build 3 layer DNN with 10, 20, 10 units respectively.
-classifier = tf.contrib.learn.DNNClassifier(feature_columns=feature_columns,
-                                            hidden_units=[40, 20, 10],
-                                            n_classes=2,
-                                            dropout=0.5,
-                                            activation_fn=af,
-                                            optimizer=optimizer,
-                                            model_dir=model_dir)
-# Fit model.
-print("Start to train the model")
-classifier.fit(x=trX, y=trY, steps=300000, batch_size=100)
-
-# Evaluate accuracy.
-accuracy_score = classifier.evaluate(x=teX, y=teY)["accuracy"]
-
-# Backtest
-backtest_input, backtest_output, backtest_value = db.get_backtest_data()
-acc_return = 0
-amrs = [] # acumulated montly return
-for date in range(len(backtest_input)):
-  input = backtest_input[date]
-  num_stock_to_buy = int(0.01*len(input))
-  if num_stock_to_buy < 1:
-    num_stock_to_buy = 1
-  output = classifier.predict_proba(x=input)
-  output_list = []
-  for a in output:
-    output_list.append(a)
-  output = numpy.array(output_list)
-  bvalue = backtest_value[date]
-  # print("output of backtest: ", output)
-
-  class1 = output[:,0]
-  # argsort the class1
-  sort_ids = numpy.argsort(class1)
-  acc_return += numpy.sum(bvalue[sort_ids[-num_stock_to_buy:]])/num_stock_to_buy
-  amrs.append(acc_return)
-  print("Accumulated return at month %d is % 3.3f%%"%(date, acc_return))
-print('Accuracy: {0:f}'.format(accuracy_score))
-print('AMRS:',amrs)
-# result = {}
-# result["Total Time"] = total_time_used
-# result["Accuracy"] = output_accuracy
-# result["AMR"] = amrs
-# result["Loss"] = final_loss
+  main(params)
