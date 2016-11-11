@@ -62,7 +62,7 @@ class DeepLinearNN(object):
       return None
     print(params)
     self.run_params.append(params)
-    db = MomentumReader("../pdata/", params.classify, test_precentage=params.test_pct, 
+    db = MomentumReader(classification=params.classify, test_precentage=params.test_pct, 
       backtest_precentage=params.backtest_pct, hot_vector=True)
 
     input_size = db.get_input_size()

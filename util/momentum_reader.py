@@ -2,16 +2,18 @@ import cPickle as pickle
 import os.path
 import numpy
 import random
+import data_reader
 
+DATABASE_NAME = data_reader.DATABASE_NAME
+DATABASE_PATH = os.path.abspath("../pdata/%s.db"%DATABASE_NAME)
 class MomentumReader():
 
 	def data_type(self):
 		return numpy.float32
 
-	def __init__(self, dir, classification = True, test_precentage = 0.1, validation_precentage = 0.1, backtest_precentage = 0.1, hot_vector = False):
-		print("Loading Momentum Database, Please Wait")
-		dir = os.path.abspath(dir)
-		db_path = os.path.join(dir,"momentum.db")
+	def __init__(self, dir=DATABASE_PATH, classification = True, test_precentage = 0.1, validation_precentage = 0.1, backtest_precentage = 0.1, hot_vector = False):
+		print("Loading Database %s, Please Wait"%DATABASE_NAME)
+		db_path = os.path.abspath(dir)
 		# if not os.path.exists(db_path):
 		# 	momentum_transformer.generate_database(db_path)
 		file = open(db_path,'rb')
@@ -99,6 +101,7 @@ class MomentumReader():
 			self.validataion_output = None
 		# calculate final trainning data size
 		self.train_size = len(self.train_input)
+		print("Loadded data, total length is",self.train_size)
 
 	def shuffle(self):
 		ids = range(len(self.train_input))
@@ -130,7 +133,6 @@ class MomentumReader():
 	def get_all_train_data(self):
 		input = numpy.array(self.train_input,self.data_type())
 		output = numpy.array(self.train_output,numpy.int)
-		output = output.reshape(output.shape[0],)
 		return input,output
 
 	def get_validation_data(self):
@@ -138,9 +140,19 @@ class MomentumReader():
 			return None,None
 		input = numpy.array(self.validataion_input,self.data_type())
 		output = numpy.array(self.validataion_output,numpy.int)
-		output = output.reshape(output.shape[0],)
 		return input, output
 
+	def get_test_data(self):
+		input = numpy.array(self.test_input,self.data_type())
+		output = numpy.array(self.test_output,numpy.int)
+		return input, output
+
+	def get_backtest_data(self):
+		input = self.backtest_input
+		output = self.backtest_output
+		value = self.backtest_value
+		return input,output,value
+		
 	def next_batch(self, num):
 
 		# self.shuffle()
@@ -156,20 +168,8 @@ class MomentumReader():
 		output = numpy.array(self.train_output[start_id:end_id],numpy.int)
 		return input, output
 
-	def get_test_data(self):
-		input = numpy.array(self.test_input,self.data_type())
-		output = numpy.array(self.test_output,numpy.int)
-		output = output.reshape(output.shape[0],)
-		return input, output
-
-	def get_backtest_data(self):
-		input = self.backtest_input
-		output = self.backtest_output
-		value = self.backtest_value
-		return input,output,value
-
 if __name__ == '__main__':
-	momr = MomentumReader("../pdata/momentum.db")
+	momr = MomentumReader("../pdata/%s.db"%DATABASE_NAME)
 	print(momr.get_test_data_size())
 	print(momr.get_test_data_size())
 	for i in range(1000):

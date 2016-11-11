@@ -205,7 +205,7 @@ def cal_jan(idb):
                 idb[stock][date]["Jan"] = 0
     return idb
 
-def idb_to_odb(idb):
+def idb_to_odb(idb, z_score=False):
     """
     @brief      convert intermediate database to output database
     
@@ -269,9 +269,15 @@ def idb_to_odb(idb):
         for n, col in enumerate(values.T):
             if n == values.shape[1]-1:
                 continue
-            mu = numpy.mean(col)
-            sigma = numpy.std(col)
-            values[:,n] = (col - mu)/sigma
+            if z_score:
+                mu = numpy.mean(col)
+                sigma = numpy.std(col)
+                values[:,n] = (col - mu)/sigma
+            else:
+                # min max normalization
+                min = numpy.min(col)
+                max = numpy.max(col)
+                values[:,n] = (col - min + 1e-3)/(max - min + 1e-3)
 
         if date not in odb:
             odb.update({date:{}})
@@ -330,9 +336,10 @@ def transform(db):
 
     return odb
 
-OUTPUT_ADDRESS = os.path.abspath("../pdata/momentum.db")
 import data_reader
 from database_manager import DatabaseManager 
+DATABASE_NAME = data_reader.DATABASE_NAME
+OUTPUT_ADDRESS = os.path.abspath("../pdata/%s.db"%data_reader.DATABASE_NAME)
 
 def generate_database(output_address = OUTPUT_ADDRESS):
     """

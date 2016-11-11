@@ -30,7 +30,7 @@ from util.momentum_reader import MomentumReader
 # print(test_set.data.shape)
 # print(test_set.target.shape)
 
-db = MomentumReader("../pdata/",test_precentage=0.3,validation_precentage=0)
+db = MomentumReader(test_precentage=0.3, validation_precentage=0)
 trX, trY = db.get_all_train_data()
 vlX, vlY = db.get_validation_data()
 teX, teY = db.get_test_data()
@@ -38,34 +38,34 @@ teX, teY = db.get_test_data()
 # print("teX:",teX.shape,"teY", teY.shape)
 print("Number of Classes is :",db.get_number_classes())
 print("Input size is ", db.get_input_size())
-# print(trX.shape)
-# print(trY.shape)
-# print(trY)
 model_dir = os.path.abspath("/tmp/stock")
 
 # if tf.gfile.Exists(model_dir):
 #   tf.gfile.DeleteRecursively(model_dir)
 # tf.gfile.MakeDirs(model_dir)
 
-# feature_columns = [tf.contrib.layers.real_valued_column("", dimension=db.get_input_size())]
 feature_columns = tf.contrib.learn.infer_real_valued_columns_from_input(trX)
-print(feature_columns)
+
+optimizer = tf.train.AdadeltaOptimizer(learning_rate=0.1)
+# optimizer = tf.train.ProximalAdagradOptimizer(learning_rate=0.1,l1_regularization_strength=0.001)
+
+af = tf.nn.sigmoid
+# af = tf.nn.relu
 
 # Build 3 layer DNN with 10, 20, 10 units respectively.
 classifier = tf.contrib.learn.DNNClassifier(feature_columns=feature_columns,
                                             hidden_units=[40, 20, 10],
                                             n_classes=2,
                                             dropout=0.5,
-                                            activation_fn=tf.nn.sigmoid,
+                                            activation_fn=af,
+                                            optimizer=optimizer,
                                             model_dir=model_dir)
-
 # Fit model.
 print("Start to train the model")
-classifier.fit(x=trX, y=trY, steps=300000, batch_size=10000)
+classifier.fit(x=trX, y=trY, steps=300000, batch_size=100)
 
 # Evaluate accuracy.
-accuracy_score = classifier.evaluate(x=teX,
-                                     y=teY)["accuracy"]
+accuracy_score = classifier.evaluate(x=teX, y=teY)["accuracy"]
 
 # Backtest
 backtest_input, backtest_output, backtest_value = db.get_backtest_data()
