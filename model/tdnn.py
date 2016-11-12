@@ -64,26 +64,35 @@ def main(params):
   backtest_input, backtest_output, backtest_value = db.get_backtest_data()
   acc_return = 0
   amrs = [] # acumulated montly return
+  buy_shorts = True
   for date in range(len(backtest_input)):
     vinput = backtest_input[date]
     voutput = backtest_output[date]
-    num_stock_to_buy = 2 #int(params.buying_pct*len(vinput))
+    num_stock_to_buy = int(params.buying_pct*len(vinput))
     if num_stock_to_buy < 1:
       num_stock_to_buy = 1
-    print("Buying stocks number",num_stock_to_buy)
+    print("Total stocks number is %d Buying stocks number %d"%(len(vinput),num_stock_to_buy))
     bvalue = backtest_value[date]
     if classification:
-      output = NN.predict_proba(x=vinput,as_iterable=False)
-      # output_list = []
-      # for a in output:
-      #   output_list.append(a)
-      # output = numpy.array(output_list)
-      sort_ids = numpy.argsort(output[:,0])
+      output = NN.predict_proba(x=vinput)
+      output = numpy.array([a for a in output])
+      # sort_ids = numpy.argsort(output[:,0])
+      longing = numpy.argsort(output[:,0])[-num_stock_to_buy:]
+      shortting = numpy.argsort(output[:,1])[-num_stock_to_buy:]
+      long_profit = numpy.sum(bvalue[longing])/num_stock_to_buy
+      short_profit = numpy.sum(-1*bvalue[shortting])/num_stock_to_buy
+      if buy_shorts:
+        acc_return += (long_profit+short_profit)/2
+        print("Long profit %f Short Profit %f"%(long_profit, short_profit))
+      else:
+        acc_return += long_profit
+        print("Long profit %f"%(long_profit))
+      # print(zip(output,voutput))
     else:
       output = NN.predict(x=vinput,as_iterable=False)
       sort_ids = numpy.argsort(output)
       # print(zip(output,voutput,sort_ids))
-    acc_return += numpy.sum(bvalue[sort_ids[-num_stock_to_buy:]])/num_stock_to_buy
+      acc_return += numpy.sum(bvalue[sort_ids[-num_stock_to_buy:]])/num_stock_to_buy
     amrs.append(acc_return)
     print("Accumulated return at month %d is % 3.3f%%"%(date, acc_return))
   print('AMRS:',amrs)
@@ -102,7 +111,7 @@ if __name__ == '__main__':
   # gd add adg mome adam ftrl rms
   params.optimizer = 'add'
   # if classification false, it will run as regression model
-  params.classification = False
+  params.classification = True
   params.test_pct = 0.3
   params.backtest_pct = 0.1
   params.buying_pct = 0.01
@@ -110,5 +119,4 @@ if __name__ == '__main__':
   params.dropout = 0.5
   params.loss_func = 'sigmoid'
   params.train = False
-
   main(params)
