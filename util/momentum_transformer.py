@@ -7,6 +7,7 @@ import numpy
 import copy
 import cPickle as pickle
 from collections import OrderedDict
+import time
 
 def cal_ar(start_price, close_price):
     """
@@ -89,6 +90,7 @@ def cal_amr(db, idb, month_range):
     """
 
     print("Calculating Monthly Database")
+    start_time = time.time()
     mdb = get_monthly_database(db)
     print("Calculating Acumulative Montly Return")
     for stock, value in mdb.items(): # stock is the stock.name, value should be the dict of {date:value}
@@ -126,6 +128,7 @@ def cal_amr(db, idb, month_range):
             # idb[stock][current_month]["Current Value"] = current_month_value
         if not idb[stock]:
             print("THIS SHOULD NOT HAPPEN: No value found for this stock", stock, len(value))
+    print("AMR tiem used:", time.time() - start_time)
     return idb
 
 def filter(db, idb):
@@ -170,6 +173,7 @@ def cal_adr(db, idb, day_range):
     @return     the intermediate database
     """
     print("Calculating Acumulative Daily Return")
+    start_time = time.time()
     for stock in idb:
         for month in idb[stock]:
             data = db.get_last_N_days_data(stock, month, day_range+1)
@@ -181,7 +185,7 @@ def cal_adr(db, idb, day_range):
             start_date = None
             start_value = None
             adr = []
-            for xdate, xvalue in data.items():
+            for xdate, xvalue in data:
                 if start_date == None:
                     start_date = xdate
                     start_value = xvalue["Close"]
@@ -193,6 +197,7 @@ def cal_adr(db, idb, day_range):
                 print("ADR length not match Should not happen")
                 idb[stock][month] = {}
             idb[stock][month].update({"ADR":adr})
+    print("ADR tiem used:", time.time() - start_time)
     return idb
 
 def cal_jan(idb):

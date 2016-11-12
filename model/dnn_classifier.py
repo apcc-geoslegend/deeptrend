@@ -87,12 +87,12 @@ def main(params):
   result["Total Time"] = time.time()-start_time
   result["Accuracy"] = accuracy_score
   result["AMR"] = amrs
-  result["Loss"] = NN.get_variable_value('loss')
+  # result["Loss"] = NN.get_variable_value('loss')
 
 if __name__ == '__main__':
   params = dlnn_util.DeepLinearNNParams()
   params.layers = [40, 4, 50]
-  params.epoch = 300000
+  params.epoch = 1
   params.batch_size = 100
   params.base_learning_rate = 0.1
   # gd add adg mome adam ftrl rms

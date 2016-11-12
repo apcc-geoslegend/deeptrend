@@ -99,12 +99,7 @@ class DatabaseManager:
             print("Not enough data in database")
             return None
 
-        all_datas = OrderedDict()
-        # return (id - N + 1) to (id + 1) to include current day
-        for xdate,value in values.items()[id-N+1:id+1]:
-            all_datas.update({xdate:value})
-
-        # all_datas = OrderedDict(sorted(all_datas.items(), key=itemgetter(0)))
+        all_datas = values.items()[id-N+1:id+1]
         return all_datas
 
     def get_current_month_all_data(self,stock,date):

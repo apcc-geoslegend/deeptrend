@@ -28,7 +28,7 @@ def test_cal_adr():
     idb = {}
     mt.cal_amr(db, idb, 12)
     mt.cal_adr(db, idb, 25)
-    print_database(idb)
+    # print_database(idb)
     for x in idb:
         for y in idb[x]:
             for i in range(25):
@@ -133,6 +133,7 @@ def test_transform():
 
 if __name__ == '__main__':
     # db = data_reader.load()
+    test_cal_adr()
     test_cal_amr()
     test_get_monthly_database()
     test_cal_jan()

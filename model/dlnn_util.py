@@ -3,6 +3,7 @@ import os.path
 import time
 import datetime
 import tensorflow as tf
+import yaml
 
 class DeepLinearNNParams():
 
@@ -20,6 +21,7 @@ class DeepLinearNNParams():
     self.loss_func = 'sigmoid'
     self.activation = 'relu'
     self.dropout = 0.5
+    self.run = False
     self.opt_dict = {
       "gd": tf.train.GradientDescentOptimizer(self.base_learning_rate),
       "add": tf.train.AdadeltaOptimizer(self.base_learning_rate, 0.9),
@@ -52,15 +54,6 @@ class DeepLinearNNParams():
         lambda y,y_: tf.nn.l2_loss(y - y_)/self.batch_size
     }
 
-    if self.optimizer not in self.opt_dict:
-      raise KeyError("ERROR: Can't find this optimizer %s"%self.optimizer)
-    
-    if self.activation not in self.af_dict:
-      raise KeyError("ERROR: Can't find this activation function %s"%self.activation)
-
-    if self.loss_func not in self.loss_dict:
-      raise KeyError("ERROR: Can't find this loss function %s"%self.loss_func)
-
   def __str__(self):
     string = "This Parameters is:     \n"
     string += ("Layer:              %s\n"%str(self.layers))
@@ -78,13 +71,32 @@ class DeepLinearNNParams():
     return string
 
   def get_optimizer(self):
+    if self.optimizer not in self.opt_dict:
+      raise KeyError("ERROR: Can't find this optimizer %s"%self.optimizer)
     return self.opt_dict[self.optimizer]
 
   def get_activation_function(self):
+    if self.activation not in self.af_dict:
+      raise KeyError("ERROR: Can't find this activation function %s"%self.activation)
     return self.af_dict[self.activation]
 
   def get_loss_function(self):
+    if self.loss_func not in self.loss_dict:
+      raise KeyError("ERROR: Can't find this loss function %s"%self.loss_func)
     return self.loss_dict[self.loss_func]
+
+  def load_yaml(self, file_path):
+    file = open(file_path, 'rt')
+    yaml_dict = yaml.load(file)
+    self.optimizer = yaml_dict['optimizer']
+    self.layers = yaml_dict['layers']
+    self.run = yaml_dict['run']
+    self.classification = yaml_dict['classification']
+    self.activation = yaml_dict['activation']
+    self.epochs = yaml_dict['epochs']
+    self.buying_pct = yaml_dict['buying_pct']
+    self.test_pct = yaml_dict['test_pct']
+    self.backtest_pct = yaml_dict['backtest_pct']
 
 def save(params, result, file_path):
   """
@@ -109,17 +121,17 @@ def save(params, result, file_path):
   #Write input parameters first
   layer_string = ','.join(map(str, params.layers))
   writer.write("--Input Parameters:\n")
-  writer.write("layers:        %s\n"%layer_string)
-  writer.write("epoch:         %d\n"%params.epoch)
-  writer.write("batch_size:    %d\n"%params.batch_size)
-  writer.write("learning_rate: %f\n"%params.learning_rate)
-  writer.write("optimizer:     %s\n"%params.optimizer)
-  writer.write("classify:      %s\n"%str(params.classify))
-  writer.write("test_pct:      %f\n"%params.test_pct)
-  writer.write("backtest_pct:  %f\n"%params.backtest_pct)
-  writer.write("buying_pct:    %s\n"%str(params.buying_pct))
-  writer.write("activation:    %s\n"%params.activation)
-  writer.write("loss_func:     %s\n"%params.loss_func)
+  writer.write("layers:             %s\n"%layer_string)
+  writer.write("epoch:              %d\n"%params.epoch)
+  writer.write("batch_size:         %d\n"%params.batch_size)
+  writer.write("base_learning_rate: %f\n"%params.base_learning_rate)
+  writer.write("optimizer:          %s\n"%params.optimizer)
+  writer.write("classify:           %s\n"%str(params.classify))
+  writer.write("test_pct:           %f\n"%params.test_pct)
+  writer.write("backtest_pct:       %f\n"%params.backtest_pct)
+  writer.write("buying_pct:         %s\n"%str(params.buying_pct))
+  writer.write("activation:         %s\n"%params.activation)
+  writer.write("loss_func:          %s\n"%params.loss_func)
   writer.write("\n")
   writer.write("--Output Results:\n")
   if result is None:
@@ -132,3 +144,28 @@ def save(params, result, file_path):
     #For loop of x months that's flexible if we extend from 12 months to say 24 or even less months
     for idx, val in enumerate(result["AMR"]):
       writer.write("Accumulated Return: %d : %s\n"%(idx, str(val)))
+
+def run(self,config_dir,re_run=True):
+  """
+  Reads parameters from a file in the config folder
+  returns a list of parameters via a list
+
+  Returns:
+    holders: A list indexed as followers: 0 = layers (list), 1 = epoch, 2 = learning_rate, 3 = optimizer,
+    4 = classify, 5 = test_pct, 6 = backtest_pct
+  """
+  nn = NN.DeepLinearNN()
+  # Iterate through files
+  path = os.path.abspath(config_dir)
+  for file_name in os.listdir(path):
+    if file_name.endswith(".yaml"):
+        print("Found Config File",os.path.join(path, file_name))
+        file_path = os.path.join(path, file_name)
+        params = DeepLinearNNParams()
+        params.load_yaml(file_path)
+        if (not re_run) and params.run = True:
+          print("%s config has already ran"%file_path)
+          continue
+        result = nn.run_model(params)
+        with open(file_path, "a") as yaml_file:
+          yaml.dump(result, yaml_file)

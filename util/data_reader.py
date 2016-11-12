@@ -65,7 +65,7 @@ def feed_data(db, dir):
                 feed_dict['Volume'] = volume
                 db.feed_current_stock(date,feed_dict)
             count += 1
-            # if count > 1000:
+            # if count > 100:
             #   break
     # db.sort()
     print("added row database, total %d stocks"%count)
