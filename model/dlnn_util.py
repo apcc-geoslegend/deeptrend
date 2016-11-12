@@ -163,7 +163,7 @@ def run(self,config_dir,re_run=True):
         file_path = os.path.join(path, file_name)
         params = DeepLinearNNParams()
         params.load_yaml(file_path)
-        if (not re_run) and params.run = True:
+        if (not re_run) and params.run:
           print("%s config has already ran"%file_path)
           continue
         result = nn.run_model(params)

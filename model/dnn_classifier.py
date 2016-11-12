@@ -52,11 +52,11 @@ def main(params):
 
   # Evaluate accuracy.
   if classification:
-    accuracy_score = NN.evaluate(x=teX, y=teY)["accuracy"]
-    print('Accuracy: {0:f}'.format(accuracy_score))
+    score = NN.evaluate(x=teX, y=teY)["accuracy"]
+    print('Accuracy: {0:f}'.format(score))
   else:
     score = NN.evaluate(x=teX, y=teY)["loss"]
-    print('Score: {0:f}'.format(accuracy_score))
+    print('Score: {0:f}'.format(score))
     
   # Backtest
   backtest_input, backtest_output, backtest_value = db.get_backtest_data()
@@ -69,7 +69,10 @@ def main(params):
       num_stock_to_buy = 1
 
     bvalue = backtest_value[date]
-    output = NN.predict_proba(x=vinput)
+    if classification:
+      output = NN.predict_proba(x=vinput)
+    else:
+      output = NN.predict(x=vinput)
     output_list = []
     for a in output:
       output_list.append(a)
@@ -85,19 +88,19 @@ def main(params):
   print('AMRS:',amrs)
   result = {}
   result["Total Time"] = time.time()-start_time
-  result["Accuracy"] = accuracy_score
+  result["Accuracy"] = score
   result["AMR"] = amrs
   # result["Loss"] = NN.get_variable_value('loss')
 
 if __name__ == '__main__':
   params = dlnn_util.DeepLinearNNParams()
   params.layers = [40, 4, 50]
-  params.epoch = 1
+  params.epoch = 300000
   params.batch_size = 100
   params.base_learning_rate = 0.1
   # gd add adg mome adam ftrl rms
   params.optimizer = 'add'
-  params.classification = True
+  params.classification = False
   params.test_pct = 0.3
   params.backtest_pct = 0.1
   params.buying_pct = 0.01
