@@ -22,6 +22,7 @@ class DeepLinearNNParams():
     self.activation = 'relu'
     self.dropout = 0.5
     self.run = False
+    self.train = True
     self.opt_dict = {
       "gd": tf.train.GradientDescentOptimizer(self.base_learning_rate),
       "add": tf.train.AdadeltaOptimizer(self.base_learning_rate, 0.9),

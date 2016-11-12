@@ -6,7 +6,8 @@ import cPickle as pickle
 import datetime
 
 # DATABASE_NAME = "merged"
-DATABASE_NAME = "NASDAQ30"
+# DATABASE_NAME = "NASDAQ30"
+DATABASE_NAME = "MERGED30"
 # DATABASE_NAME = "NYSE30"
 READ_ADDRESS = os.path.abspath("../data/"+DATABASE_NAME)
 WRITE_ADDRESS = os.path.abspath("../pdata/%s.rdb"%DATABASE_NAME)

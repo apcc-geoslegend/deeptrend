@@ -25,6 +25,10 @@ class MomentumReader():
 		self.classification = classification
 		self.all_dates = []
 		self.all_stocks = []
+		# filter all the date that doesn't have enough stock
+		for date in db:
+			if len(db[date].items())<100:
+				db.pop(date)
 		for date in db:
 			if date not in self.all_dates:
 				self.all_dates.append(date)
@@ -49,6 +53,7 @@ class MomentumReader():
 		# validation_start_id = int(len(self.all_dates)*(1 - test_precentage - backtest_precentage - validation_precentage))
 		test_start_id = int(len(self.all_dates)*(1 - test_precentage - backtest_precentage)) 
 		backtest_start_id = int(len(self.all_dates)*(1 - backtest_precentage))
+		# print(test_start_id, backtest_start_id)
 		self.train_input = []
 		self.train_output = []
 		self.test_input = []
@@ -56,12 +61,13 @@ class MomentumReader():
 		self.backtest_input = []
 		self.backtest_output = []
 		self.backtest_value = []
-		for id,date in enumerate(db):
+		for id, date in enumerate(db):
 			test = False
 			backtest = False
 			if id >= test_start_id and id < backtest_start_id:
 				test = True
 			if id >= backtest_start_id:
+				# count = 0
 				backtest = True
 				self.backtest_input.append([])
 				self.backtest_output.append([])
@@ -80,6 +86,7 @@ class MomentumReader():
 					self.test_input.append(ainput)
 					self.test_output.append(aoutput)
 				if backtest:
+					# count += 1
 					self.backtest_input[-1].append(ainput)
 					self.backtest_output[-1].append(aoutput)
 					self.backtest_value[-1].append(avalue)
@@ -87,9 +94,11 @@ class MomentumReader():
 					self.train_input.append(ainput)
 					self.train_output.append(aoutput)
 			if backtest:
+				# print(count)
 				self.backtest_input[-1]  = numpy.array(self.backtest_input[-1],dtype=self.data_type())
 				self.backtest_output[-1] = numpy.array(self.backtest_output[-1],dtype=self.data_type())
 				self.backtest_value[-1]  = numpy.array(self.backtest_value[-1],dtype=self.data_type())
+				# print(self.backtest_input[-1].shape)
 
 		self.shuffle()
 		# get validataion data
@@ -173,10 +182,6 @@ class MomentumReader():
 		return input, output
 
 if __name__ == '__main__':
-	momr = MomentumReader("../pdata/%s.db"%DATABASE_NAME)
-	print(momr.get_test_data_size())
-	print(momr.get_test_data_size())
-	for i in range(1000):
-		input, output = momr.next_batch(100)
-		print(input.shape, output.shape)
-	print(momr.get_backtest_data())
+	momr = MomentumReader()
+	# for date in momr.db:
+	# 	print(len(momr.db[date].items()))

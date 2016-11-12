@@ -40,15 +40,17 @@ def main(params):
     NN = tf.contrib.learn.DNNRegressor(
       feature_columns=feature_columns,
       hidden_units=layers,
+      label_dimension=1,
       dropout=params.dropout,
       activation_fn=af,
       optimizer=optimizer,
       model_dir=model_dir)
 
   start_time = time.time()
-  # Fit model.
-  print("Start to train the model")
-  NN.fit(x=trX, y=trY, steps=params.epoch, batch_size=params.batch_size)
+  if params.train:
+    # Fit model.
+    print("Start to train the model")
+    NN.fit(x=trX, y=trY, steps=params.epoch, batch_size=params.batch_size)
 
   # Evaluate accuracy.
   if classification:
@@ -64,21 +66,23 @@ def main(params):
   amrs = [] # acumulated montly return
   for date in range(len(backtest_input)):
     vinput = backtest_input[date]
-    num_stock_to_buy = int(params.buying_pct*len(vinput))
+    voutput = backtest_output[date]
+    num_stock_to_buy = 2 #int(params.buying_pct*len(vinput))
     if num_stock_to_buy < 1:
       num_stock_to_buy = 1
+    print("Buying stocks number",num_stock_to_buy)
     bvalue = backtest_value[date]
     if classification:
-      output = NN.predict_proba(x=vinput)
-      output_list = []
-      for a in output:
-        output_list.append(a)
-      output = numpy.array(output_list)
+      output = NN.predict_proba(x=vinput,as_iterable=False)
+      # output_list = []
+      # for a in output:
+      #   output_list.append(a)
+      # output = numpy.array(output_list)
       sort_ids = numpy.argsort(output[:,0])
     else:
-      output = NN.predict(x=vinput)
-      output = numpy.array(output)
+      output = NN.predict(x=vinput,as_iterable=False)
       sort_ids = numpy.argsort(output)
+      # print(zip(output,voutput,sort_ids))
     acc_return += numpy.sum(bvalue[sort_ids[-num_stock_to_buy:]])/num_stock_to_buy
     amrs.append(acc_return)
     print("Accumulated return at month %d is % 3.3f%%"%(date, acc_return))
@@ -92,8 +96,8 @@ def main(params):
 if __name__ == '__main__':
   params = dlnn_util.DeepLinearNNParams()
   params.layers = [40, 4, 50]
-  params.epoch = 5000000
-  params.batch_size = 500
+  params.epoch = 10e4 # 1e4 is around 1 mins
+  params.batch_size = 1000
   params.base_learning_rate = 0.05
   # gd add adg mome adam ftrl rms
   params.optimizer = 'add'
@@ -105,5 +109,6 @@ if __name__ == '__main__':
   params.activation = 'relu'
   params.dropout = 0.5
   params.loss_func = 'sigmoid'
+  params.train = False
 
   main(params)
