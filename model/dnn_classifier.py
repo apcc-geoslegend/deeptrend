@@ -85,18 +85,19 @@ def main(params):
   print('AMRS:',amrs)
   result = {}
   result["Total Time"] = time.time()-start_time
-  result["Accuracy"] = score
+  result["Score"] = score
   result["AMR"] = amrs
   # result["Loss"] = NN.get_variable_value('loss')
 
 if __name__ == '__main__':
   params = dlnn_util.DeepLinearNNParams()
   params.layers = [40, 4, 50]
-  params.epoch = 100000
-  params.batch_size = 100
-  params.base_learning_rate = 0.1
+  params.epoch = 5000000
+  params.batch_size = 500
+  params.base_learning_rate = 0.05
   # gd add adg mome adam ftrl rms
   params.optimizer = 'add'
+  # if classification false, it will run as regression model
   params.classification = False
   params.test_pct = 0.3
   params.backtest_pct = 0.1
