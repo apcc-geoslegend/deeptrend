@@ -20,7 +20,7 @@ def main(params):
   print("Number of Classes is :",db.get_number_classes())
   print("Input size is ", db.get_input_size())
 
-  model_dir = os.path.abspath("/tmp/stock")
+  model_dir = os.path.abspath("./run_data/stock")
   optimizer = params.get_optimizer()
   af = params.get_activation_function()
   layers = params.layers
@@ -67,20 +67,17 @@ def main(params):
     num_stock_to_buy = int(params.buying_pct*len(vinput))
     if num_stock_to_buy < 1:
       num_stock_to_buy = 1
-
     bvalue = backtest_value[date]
     if classification:
       output = NN.predict_proba(x=vinput)
-    else:
-      output = NN.predict(x=vinput)
-    output_list = []
-    for a in output:
-      output_list.append(a)
-    output = numpy.array(output_list)
-    if classification:
-      # argsort the class1
+      output_list = []
+      for a in output:
+        output_list.append(a)
+      output = numpy.array(output_list)
       sort_ids = numpy.argsort(output[:,0])
     else:
+      output = NN.predict(x=vinput)
+      output = numpy.array(output)
       sort_ids = numpy.argsort(output)
     acc_return += numpy.sum(bvalue[sort_ids[-num_stock_to_buy:]])/num_stock_to_buy
     amrs.append(acc_return)
@@ -95,7 +92,7 @@ def main(params):
 if __name__ == '__main__':
   params = dlnn_util.DeepLinearNNParams()
   params.layers = [40, 4, 50]
-  params.epoch = 300000
+  params.epoch = 100000
   params.batch_size = 100
   params.base_learning_rate = 0.1
   # gd add adg mome adam ftrl rms
