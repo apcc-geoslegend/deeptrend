@@ -83,10 +83,14 @@ if __name__ == '__main__':
     utilities.random_seed_np_tf(FLAGS.seed)
     FLAGS.do_pretrain = True
     FLAGS.do_train = True
+    FLAGS.encoder_layers = '40,4,'
+    FLAGS.decoder_layers = '50,'
+    FLAGS.finetune_act_func = 'tanh'
+    FLAGS.finetune_opt = 'adam'
     FLAGS.restore_previous_model = False
-    FLAGS.finetune_num_epochs = 100000
+    FLAGS.finetune_num_epochs = 1000
     FLAGS.finetune_batch_size = 1000
-    FLAGS.rbm_num_epochs = '10000,'
+    FLAGS.rbm_num_epochs = '1000,'
     FLAGS.rbm_batch_size = '500,'
 
     mr = MomentumReader(classification=True, test_precentage=0.3, validation_precentage=0.1, hot_vector=True)
