@@ -118,6 +118,7 @@ class DeepBeliefNetwork(SupervisedModel):
         self.encoder_layers = dbn_param.encoder_layers
         self.decoder_layers = dbn_param.decoder_layers
         self.encode_act_func = dbn_param.encode_act_func
+        self.decode_act_func = dbn_param.decode_act_func
         self.verbose = dbn_param.verbose
 
         # Model parameters
@@ -235,7 +236,7 @@ class DeepBeliefNetwork(SupervisedModel):
         """
         self._create_placeholders(n_features, n_classes)
         self._create_variables(n_features)
-        self._create_decoding_variables()
+        self._create_decoding_variables(self.encoder_layers[-1])
 
         encoder = self._create_encoding_layers()
         decoder = self._create_decoding_lyaers(encoder)
@@ -334,16 +335,22 @@ class DeepBeliefNetwork(SupervisedModel):
 
         return next_train
 
-    def _create_decoding_variables(self):
+    def _create_decoding_variables(self, last_encoder_num):
         """Create model variables (previous unsupervised pretraining).
 
         :return: self
         """
         for l, layer in enumerate(self.decoder_layers):
-            self.decoding_w_[l] = tf.Variable(
-                self.decoding_w_[l], name='dec-w-{}'.format(l))
-            self.decoding_b_[l] = tf.Variable(
-                self.decoding_b_[l], name='dec-b-{}'.format(l))
+            if l == 0:
+                self.decoding_w_.append(tf.Variable(tf.truncated_normal(
+                    shape=[last_encoder_num, self.decoder_layers[l]], stddev=0.1)))
+                self.decoding_b_.append(tf.Variable(tf.constant(
+                    0.1, shape=[self.decoder_layers[l]])))
+            else:
+                self.decoding_w_.append(tf.Variable(tf.truncated_normal(
+                    shape=[self.decoder_layers[l - 1], self.decoder_layers[l]], stddev=0.1)))
+                self.decoding_b_.append(tf.Variable(tf.constant(
+                    0.1, shape=[self.decoder_layers[l]])))
 
     def _create_decoding_lyaers(self, encoder):
         """Create the encoding decoder_layers for supervised finetuning.
