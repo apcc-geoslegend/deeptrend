@@ -92,6 +92,14 @@ class SupervisedModel(Model):
                 return self.model_predictions.eval({self.input_data: test_set,
                                                     self.keep_prob: 1})
 
+    def predict_prob(self, test_set):
+        with self.tf_graph.as_default():
+            with tf.Session() as self.tf_session:
+                self.tf_saver.restore(self.tf_session, self.model_path)
+                return self.last_out.eval({self.input_data: test_set,
+                                                    self.keep_prob: 1})
+
+        
     def compute_accuracy(self, test_set, test_labels):
         """Compute the accuracy over the test set.
 

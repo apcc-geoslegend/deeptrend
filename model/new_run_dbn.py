@@ -5,9 +5,9 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(".."))
 from util.momentum_reader import MomentumReader
-import numpy as np
 import tensorflow as tf
-
+import numpy
+import time
 # import config
 
 from yadlt.models.rbm_models import dbn
@@ -84,12 +84,17 @@ if __name__ == '__main__':
     FLAGS.do_pretrain = True
     FLAGS.do_train = True
     FLAGS.restore_previous_model = False
+    FLAGS.finetune_num_epochs = 200
+    FLAGS.finetune_batch_size = 200
+    FLAGS.rbm_num_epochs = '200,'
+    FLAGS.rbm_batch_size = '200,'
 
     mr = MomentumReader(classification=True, test_precentage=0.3, validation_precentage=0.1, hot_vector=True)
     trX, trY = mr.get_all_train_data()
     vlX, vlY = mr.get_validation_data()
     teX, teY = mr.get_test_data()
 
+    start_time = time.time()
     # Create the object
     finetune_act_func = utilities.str2actfunc(FLAGS.finetune_act_func)
 
@@ -108,6 +113,33 @@ if __name__ == '__main__':
 
     # Test the model
     print('Test set accuracy: {}'.format(srbm.compute_accuracy(teX, teY)))
+
+    btX, btY, btV = mr.get_backtest_data()
+    acc_return = 0
+    amrs = [] # acumulated montly return
+    for date in range(len(btX)):
+        input = btX[date]
+        num_stock_to_buy = int(0.1*len(input))
+        if num_stock_to_buy < 1:
+            num_stock_to_buy = 1
+        output = srbm.predict_prob(input)
+        bvalue = btV[date]
+        # print("output of backtest: ", output)
+        class1 = output[:,0]
+        # argsort the class1
+        sort_ids = numpy.argsort(class1)
+        acc_return += numpy.sum(bvalue[sort_ids[-num_stock_to_buy:]])/num_stock_to_buy
+        amrs.append(acc_return)
+        print("Accumulated return at month %d is % 3.3f%%"%(date, acc_return))
+
+    total_time_used = time.time() - start_time
+    print("toltal time used:",total_time_used)
+    # result = {}
+    # result["Total Time"] = total_time_used
+    # result["Accuracy"] = output_accuracy
+    # result["AMR"] = amrs
+    # result["Loss"] = final_loss
+    # return result
 
     # # Save the predictions of the model
     # if FLAGS.save_predictions:
