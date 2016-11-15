@@ -117,9 +117,9 @@ if __name__ == '__main__':
     teX, teY = mr.get_test_data()
 
 
-    models_dir = os.path.abspath("./dbn/model")
-    data_dir = os.path.abspath("./dbn/data")
-    summary_dir = os.path.abspath("./dbn/summery")
+    models_dir = os.path.abspath("./run_data/dbn/model")
+    data_dir = os.path.abspath("./run_data/dbn/data")
+    summary_dir = os.path.abspath("./run_data/dbn/summery")
 
     # Create the object
     finetune_act_func = utilities.str2actfunc(FLAGS.finetune_act_func)

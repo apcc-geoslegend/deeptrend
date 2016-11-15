@@ -12,11 +12,13 @@ from yadlt.core.supervised_model import SupervisedModel
 from yadlt.models.rbm_models import rbm
 from yadlt.utils import utilities
 
+
 class DBNParam():
+
     def __init__(self):
         """Constructor.
 
-        :param encode_layers: list containing the hidden units for each layer
+        :param encoder_layers: list containing the hidden units for each layer
         :param finetune_loss_func: Loss function for the softmax layer.
             string, default ['softmax_cross_entropy', 'mean_squared']
         :param finetune_dropout: dropout parameter
@@ -33,56 +35,58 @@ class DBNParam():
         :param do_pretrain: True: uses variables from pretraining,
             False: initialize new variables.
         """
-        self.encode_layers = [255]
-        self.decode_layers =[]
+        self.encoder_layers = [255]
+        self.decoder_layers = []
         self.model_name = 'dbn'
         self.do_pretrain = False
-        self.main_dir='dbn/'
-        self.models_dir='models/' 
-        self.data_dir='data/'
-        self.summary_dir='logs/'
-        self.rbm_num_epochs=[10]
-        self.rbm_gibbs_k=[1]
-        self.rbm_gauss_visible=False
-        self.rbm_stddev=0.1
-        self.rbm_batch_size=[10]
-        self.dataset='mnist'
-        self.rbm_learning_rate=[0.01]
-        self.encode_act_func=tf.nn.sigmoid
-        self.decode_act_func=tf.nn.sigmoid
-        self.finetune_dropout=1
-        self.finetune_loss_func='softmax_cross_entropy'
-        self.finetune_opt='gradient_descent'
-        self.finetune_learning_rate=0.001
-        self.finetune_num_epochs=10
-        self.finetune_batch_size=20
-        self.verbose=1
-        self.momentum=0.5
+        self.main_dir = 'dbn/'
+        self.models_dir = 'models/'
+        self.data_dir = 'data/'
+        self.summary_dir = 'logs/'
+        self.rbm_num_epochs = [10]
+        self.rbm_gibbs_k = [1]
+        self.rbm_gauss_visible = False
+        self.rbm_stddev = 0.1
+        self.rbm_batch_size = [10]
+        self.dataset = 'mnist'
+        self.rbm_learning_rate = [0.01]
+        self.encode_act_func = tf.nn.sigmoid
+        self.decode_act_func = tf.nn.sigmoid
+        self.finetune_dropout = 1
+        self.finetune_loss_func = 'softmax_cross_entropy'
+        self.finetune_opt = 'gradient_descent'
+        self.finetune_learning_rate = 0.001
+        self.finetune_num_epochs = 10
+        self.finetune_batch_size = 20
+        self.verbose = 1
+        self.momentum = 0.5
 
     def parse_flag(self, FLAGS):
-        self.models_dir=FLAGS.models_dir
-        self.data_dir=FLAGS.data_dir
-        self.summary_dir=FLAGS.summary_dir
-        self.model_name=FLAGS.model_name 
-        self.do_pretrain=FLAGS.do_pretrain
-        self.rbm_layers=rbm_layers
-        self.dataset=FLAGS.dataset
-        self.main_dir=FLAGS.main_dir
-        self.finetune_act_func=finetune_act_func
-        self.rbm_learning_rate=rbm_learning_rate
-        self.verbose=FLAGS.verbose 
-        self.rbm_num_epochs=rbm_num_epochs
-        self.rbm_gibbs_k = rbm_gibbs_k
-        self.rbm_gauss_visible=FLAGS.rbm_gauss_visible 
-        self.rbm_stddev=FLAGS.rbm_stddev
-        self.momentum=FLAGS.momentum 
-        self.rbm_batch_size=rbm_batch_size 
-        self.finetune_learning_rate=FLAGS.finetune_learning_rate
-        self.finetune_num_epochs=FLAGS.finetune_num_epochs 
-        self.finetune_batch_size=FLAGS.finetune_batch_size
-        self.finetune_opt=FLAGS.finetune_opt 
-        self.finetune_loss_func=FLAGS.finetune_loss_func
-        self.finetune_dropout=FLAGS.finetune_dropout
+        self.models_dir = FLAGS.models_dir
+        self.data_dir = FLAGS.data_dir
+        self.summary_dir = FLAGS.summary_dir
+        self.model_name = FLAGS.model_name
+        self.do_pretrain = FLAGS.do_pretrain
+        self.decoder_layers = utilities.flag_to_list(FLAGS.decoder_layers,'int')
+        self.encoder_layers = utilities.flag_to_list(FLAGS.encoder_layers,'int')
+        self.dataset = FLAGS.dataset
+        self.main_dir = FLAGS.main_dir
+        self.finetune_act_func = FLAGS.finetune_act_func
+        self.verbose = FLAGS.verbose
+        self.rbm_learning_rate = utilities.flag_to_list(FLAGS.rbm_learning_rate,'float')
+        self.rbm_num_epochs = utilities.flag_to_list(FLAGS.rbm_num_epochs,'int')
+        self.rbm_gibbs_k = utilities.flag_to_list(FLAGS.rbm_gibbs_k,'int')
+        self.rbm_batch_size = utilities.flag_to_list(FLAGS.rbm_batch_size,'int')
+        self.rbm_gauss_visible = FLAGS.rbm_gauss_visible
+        self.rbm_stddev = FLAGS.rbm_stddev
+        self.momentum = FLAGS.momentum
+        self.finetune_learning_rate = FLAGS.finetune_learning_rate
+        self.finetune_num_epochs = FLAGS.finetune_num_epochs
+        self.finetune_batch_size = FLAGS.finetune_batch_size
+        self.finetune_opt = FLAGS.finetune_opt
+        self.finetune_loss_func = FLAGS.finetune_loss_func
+        self.finetune_dropout = FLAGS.finetune_dropout
+
 
 class DeepBeliefNetwork(SupervisedModel):
     """Implementation of Deep Belief Network for Supervised Learning.
@@ -93,26 +97,26 @@ class DeepBeliefNetwork(SupervisedModel):
     def __init__(self, dbn_param):
         self.dbn_param = dbn_param
         SupervisedModel.__init__(
-            self, 
-            dbn_param.model_name, 
-            dbn_param.main_dir, 
-            dbn_param.models_dir, 
-            dbn_param.data_dir, 
+            self,
+            dbn_param.model_name,
+            dbn_param.main_dir,
+            dbn_param.models_dir,
+            dbn_param.data_dir,
             dbn_param.summary_dir)
 
         self._initialize_training_parameters(
-            loss_func=dbn_param.finetune_loss_func, 
+            loss_func=dbn_param.finetune_loss_func,
             learning_rate=dbn_param.finetune_learning_rate,
-            dropout=dbn_param.finetune_dropout, 
+            dropout=dbn_param.finetune_dropout,
             num_epochs=dbn_param.finetune_num_epochs,
-            batch_size=finetune_batch_size, 
-            dataset=dbn_param.dataset, 
+            batch_size=dbn_param.finetune_batch_size,
+            dataset=dbn_param.dataset,
             opt=dbn_param.finetune_opt,
             momentum=dbn_param.momentum)
 
         self.do_pretrain = dbn_param.do_pretrain
-        self.encode_layers = dbn_param.encode_layers
-        self.decode_layers = dbn_param.decode_layers
+        self.encoder_layers = dbn_param.encoder_layers
+        self.decoder_layers = dbn_param.decoder_layers
         self.encode_act_func = dbn_param.encode_act_func
         self.verbose = dbn_param.verbose
 
@@ -122,27 +126,29 @@ class DeepBeliefNetwork(SupervisedModel):
         self.decoding_w_ = []
         self.decoding_b_ = []
 
-
         self.softmax_W = None
         self.softmax_b = None
 
+        print(self.encoder_layers)
+        print(self.decoder_layers)
         rbm_params = {
             'num_epochs': dbn_param.rbm_num_epochs, 'gibbs_k': dbn_param.rbm_gibbs_k,
             'batch_size': dbn_param.rbm_batch_size, 'learning_rate': dbn_param.rbm_learning_rate}
 
         for p in rbm_params:
-            if len(rbm_params[p]) != len(encode_layers):
+            if len(rbm_params[p]) != len(self.encoder_layers):
                 # The current parameter is not specified by the user,
-                # should default it for all the encode_layers
-                rbm_params[p] = [rbm_params[p][0] for _ in encode_layers]
+                # should default it for all the encoder_layers
+                rbm_params[p] = [rbm_params[p][0] for _ in self.encoder_layers]
+        print(rbm_params)
 
         self.rbms = []
         self.rbm_graphs = []
 
-        for l, layer in enumerate(encode_layers):
-            rbm_str = 'rbm-' + str(l+1)
+        for l, layer in enumerate(self.encoder_layers):
+            rbm_str = 'rbm-' + str(l + 1)
 
-            if l == 0 and rbm_gauss_visible:
+            if l == 0 and dbn_param.rbm_gauss_visible:
                 self.rbms.append(
                     rbm.RBM(
                         model_name=self.model_name + '-' + rbm_str,
@@ -274,39 +280,39 @@ class DeepBeliefNetwork(SupervisedModel):
         self.encoding_w_ = []
         self.encoding_b_ = []
 
-        for l, layer in enumerate(self.encode_layers):
+        for l, layer in enumerate(self.encoder_layers):
 
             if l == 0:
                 self.encoding_w_.append(tf.Variable(tf.truncated_normal(
-                    shape=[n_features, self.encode_layers[l]], stddev=0.1)))
+                    shape=[n_features, self.encoder_layers[l]], stddev=0.1)))
                 self.encoding_b_.append(tf.Variable(tf.constant(
-                    0.1, shape=[self.encode_layers[l]])))
+                    0.1, shape=[self.encoder_layers[l]])))
             else:
                 self.encoding_w_.append(tf.Variable(tf.truncated_normal(
-                    shape=[self.encode_layers[l-1], self.encode_layers[l]], stddev=0.1)))
+                    shape=[self.encoder_layers[l - 1], self.encoder_layers[l]], stddev=0.1)))
                 self.encoding_b_.append(tf.Variable(tf.constant(
-                    0.1, shape=[self.encode_layers[l]])))
+                    0.1, shape=[self.encoder_layers[l]])))
 
     def _create_variables_pretrain(self):
         """Create model variables (previous unsupervised pretraining).
 
         :return: self
         """
-        for l, layer in enumerate(self.encode_layers):
+        for l, layer in enumerate(self.encoder_layers):
             self.encoding_w_[l] = tf.Variable(
                 self.encoding_w_[l], name='enc-w-{}'.format(l))
             self.encoding_b_[l] = tf.Variable(
                 self.encoding_b_[l], name='enc-b-{}'.format(l))
 
     def _create_encoding_layers(self):
-        """Create the encoding encode_layers for supervised finetuning.
+        """Create the encoding encoder_layers for supervised finetuning.
 
         :return: output of the final encoding layer.
         """
         next_train = self.input_data
         self.layer_nodes = []
 
-        for l, layer in enumerate(self.encode_layers):
+        for l, layer in enumerate(self.encoder_layers):
 
             with tf.name_scope("encode-{}".format(l)):
 
@@ -333,14 +339,14 @@ class DeepBeliefNetwork(SupervisedModel):
 
         :return: self
         """
-        for l, layer in enumerate(self.decode_layers):
+        for l, layer in enumerate(self.decoder_layers):
             self.decoding_w_[l] = tf.Variable(
                 self.decoding_w_[l], name='dec-w-{}'.format(l))
             self.decoding_b_[l] = tf.Variable(
                 self.decoding_b_[l], name='dec-b-{}'.format(l))
 
-    def _create_decoding_lyaers(self,encoder):
-        """Create the encoding decode_layers for supervised finetuning.
+    def _create_decoding_lyaers(self, encoder):
+        """Create the encoding decoder_layers for supervised finetuning.
 
         :return: output of the final encoding layer.
         """
@@ -348,7 +354,7 @@ class DeepBeliefNetwork(SupervisedModel):
         self.decoder_layer_nodes = []
         decoder = encoder
 
-        for l, layer in enumerate(self.decode_layers):
+        for l, layer in enumerate(self.decoder_layers):
 
             with tf.name_scope("decode-{}".format(l)):
 

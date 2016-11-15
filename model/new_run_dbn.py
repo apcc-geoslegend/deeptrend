@@ -37,18 +37,19 @@ flags.DEFINE_boolean('do_train', True, 'Whether or not train the network.')
 flags.DEFINE_boolean('restore_previous_model', False, 'If true, restore previous model corresponding to model name.')
 flags.DEFINE_integer('seed', -1, 'Seed for the random generators (>= 0). Useful for testing hyperparameters.')
 flags.DEFINE_integer('verbose', 1, 'Level of verbosity. 0 - silent, 1 - print accuracy.')
-flags.DEFINE_string('main_dir', './dbn/', 'Directory to store data relative to the algorithm.')
+flags.DEFINE_string('main_dir', 'dbn/', 'Directory to store data relative to the algorithm.')
 flags.DEFINE_string('models_dir', 'model/', 'Directory to store data relative to the algorithm.')
 flags.DEFINE_string('data_dir', 'data/', 'Directory to store data relative to the algorithm.')
 flags.DEFINE_string('summary_dir', 'summery/', 'Directory to store data relative to the algorithm.')
 flags.DEFINE_float('momentum', 0.5, 'Momentum parameter.')
 
 # RBMs layers specific parameters
-flags.DEFINE_string('rbm_layers', '40,4,50,', 'Comma-separated values for the layers in the sdae.')
+flags.DEFINE_string('encoder_layers', '40,4,', 'Comma-separated values for the layers in the sdae.')
+flags.DEFINE_string('decoder_layers', '50,', 'Comma-separated values for the layers in the sdae.')
 flags.DEFINE_boolean('rbm_gauss_visible', False, 'Whether to use Gaussian units for the visible layer.')
 flags.DEFINE_float('rbm_stddev', 0.1, 'Standard deviation for Gaussian visible units.')
 flags.DEFINE_string('rbm_learning_rate', '0.01,', 'Initial learning rate.')
-flags.DEFINE_string('rbm_num_epochs', '10,', 'Number of epochs.')
+flags.DEFINE_string('rbm_num_epochs', '1,', 'Number of epochs.')
 flags.DEFINE_string('rbm_batch_size', '10,', 'Size of each mini-batch.')
 flags.DEFINE_string('rbm_gibbs_k', '1,', 'Gibbs sampling steps.')
 
@@ -56,14 +57,15 @@ flags.DEFINE_string('rbm_gibbs_k', '1,', 'Gibbs sampling steps.')
 flags.DEFINE_string('finetune_act_func', 'sigmoid', 'Activation function.')
 flags.DEFINE_float('finetune_learning_rate', 0.01, 'Learning rate.')
 flags.DEFINE_float('finetune_momentum', 0.7, 'Momentum parameter.')
-flags.DEFINE_integer('finetune_num_epochs', 10, 'Number of epochs.')
+flags.DEFINE_integer('finetune_num_epochs', 1, 'Number of epochs.')
 flags.DEFINE_integer('finetune_batch_size', 10, 'Size of each mini-batch.')
 flags.DEFINE_string('finetune_opt', 'gradient_descent', '["gradient_descent", "ada_grad", "momentum", "adam"]')
 flags.DEFINE_string('finetune_loss_func', 'softmax_cross_entropy', 'Loss function. ["mean_squared", "softmax_cross_entropy"]')
 flags.DEFINE_float('finetune_dropout', 1, 'Dropout parameter.')
 
 # Conversion of Autoencoder layers parameters from string to their specific type
-rbm_layers = utilities.flag_to_list(FLAGS.rbm_layers, 'int')
+encoder_layers = utilities.flag_to_list(FLAGS.encoder_layers, 'int')
+decoder_layers = utilities.flag_to_list(FLAGS.decoder_layers, 'int')
 rbm_learning_rate = utilities.flag_to_list(FLAGS.rbm_learning_rate, 'float')
 rbm_num_epochs = utilities.flag_to_list(FLAGS.rbm_num_epochs, 'int')
 rbm_batch_size = utilities.flag_to_list(FLAGS.rbm_batch_size, 'int')
@@ -73,7 +75,8 @@ rbm_gibbs_k = utilities.flag_to_list(FLAGS.rbm_gibbs_k, 'int')
 assert FLAGS.dataset in ['mnist', 'cifar10', 'custom']
 assert FLAGS.finetune_act_func in ['sigmoid', 'tanh', 'relu']
 assert FLAGS.finetune_loss_func in ['mean_squared', 'softmax_cross_entropy']
-assert len(rbm_layers) > 0
+assert len(encoder_layers) > 0
+assert len(decoder_layers) > 0
 
 if __name__ == '__main__':
 
@@ -90,7 +93,7 @@ if __name__ == '__main__':
     # Create the object
     finetune_act_func = utilities.str2actfunc(FLAGS.finetune_act_func)
 
-    param = DBNParam()
+    param = dbn.DBNParam()
     param.parse_flag(FLAGS)
     srbm = dbn.DeepBeliefNetwork(param)
 
