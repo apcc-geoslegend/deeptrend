@@ -85,7 +85,7 @@ class Model(object):
                     with the same name of this model is restored from disk
                     to continue training.
         """
-        self.tf_merged_summaries = tf.merge_all_summaries()
+        self.tf_merged_summaries = tf.summary.merge_all()
         init_op = tf.global_variables_initializer()
         self.tf_saver = tf.train.Saver()
 
@@ -279,7 +279,7 @@ class Model(object):
 
         if cost is not None:
             self.cost = cost + regterm if regterm is not None else cost
-            tf.scalar_summary(self.loss_func, self.cost)
+            tf.summary.scalar(self.loss_func, self.cost)
         else:
             self.cost = None
 
