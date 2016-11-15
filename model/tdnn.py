@@ -104,19 +104,19 @@ def main(params):
 
 if __name__ == '__main__':
   params = dlnn_util.DeepLinearNNParams()
-  params.layers = [40, 4, 50]
+  params.layers = [10]
   params.epoch = 10e4 # 1e4 is around 1 mins
   params.batch_size = 1000
   params.base_learning_rate = 0.05
   # gd add adg mome adam ftrl rms
   params.optimizer = 'add'
   # if classification false, it will run as regression model
-  params.classification = True
+  params.classification = False
   params.test_pct = 0.3
   params.backtest_pct = 0.1
   params.buying_pct = 0.01
   params.activation = 'relu'
   params.dropout = 0.5
   params.loss_func = 'sigmoid'
-  params.train = False
+  params.train = True
   main(params)

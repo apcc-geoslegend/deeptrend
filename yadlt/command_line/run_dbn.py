@@ -1,12 +1,8 @@
-# this file runs the deep belief network from yadlt
-# need to install yadlt first
-# sudo pip install yadlt
-import sys
-import os
-sys.path.insert(0, os.path.abspath(".."))
-from util.momentum_reader import MomentumReader
 import numpy as np
 import tensorflow as tf
+import os
+
+import config
 
 from yadlt.models.rbm_models import dbn
 from yadlt.utils import datasets, utilities
@@ -38,7 +34,7 @@ flags.DEFINE_string('main_dir', 'dbn/', 'Directory to store data relative to the
 flags.DEFINE_float('momentum', 0.5, 'Momentum parameter.')
 
 # RBMs layers specific parameters
-flags.DEFINE_string('rbm_layers', '40,4,', 'Comma-separated values for the layers in the sdae.')
+flags.DEFINE_string('rbm_layers', '256,', 'Comma-separated values for the layers in the sdae.')
 flags.DEFINE_boolean('rbm_gauss_visible', False, 'Whether to use Gaussian units for the visible layer.')
 flags.DEFINE_float('rbm_stddev', 0.1, 'Standard deviation for Gaussian visible units.')
 flags.DEFINE_string('rbm_learning_rate', '0.01,', 'Initial learning rate.')
@@ -73,53 +69,46 @@ if __name__ == '__main__':
 
     utilities.random_seed_np_tf(FLAGS.seed)
 
-    # if FLAGS.dataset == 'mnist':
+    if FLAGS.dataset == 'mnist':
 
-    #     # ################# #
-    #     #   MNIST Dataset   #
-    #     # ################# #
+        # ################# #
+        #   MNIST Dataset   #
+        # ################# #
 
-    #     trX, trY, vlX, vlY, teX, teY = datasets.load_mnist_dataset(mode='supervised')
+        trX, trY, vlX, vlY, teX, teY = datasets.load_mnist_dataset(mode='supervised')
 
-    # elif FLAGS.dataset == 'cifar10':
+    elif FLAGS.dataset == 'cifar10':
 
-    #     # ################### #
-    #     #   Cifar10 Dataset   #
-    #     # ################### #
+        # ################### #
+        #   Cifar10 Dataset   #
+        # ################### #
 
-    #     trX, trY, teX, teY = datasets.load_cifar10_dataset(FLAGS.cifar_dir, mode='supervised')
-    #     vlX = teX[:5000]  # Validation set is the first half of the test set
-    #     vlY = teY[:5000]
+        trX, trY, teX, teY = datasets.load_cifar10_dataset(FLAGS.cifar_dir, mode='supervised')
+        vlX = teX[:5000]  # Validation set is the first half of the test set
+        vlY = teY[:5000]
 
-    # elif FLAGS.dataset == 'custom':
+    elif FLAGS.dataset == 'custom':
 
-    #     # ################## #
-    #     #   Custom Dataset   #
-    #     # ################## #
+        # ################## #
+        #   Custom Dataset   #
+        # ################## #
 
-    #     def load_from_np(dataset_path):
-    #         if dataset_path != '':
-    #             return np.load(dataset_path)
-    #         else:
-    #             return None
+        def load_from_np(dataset_path):
+            if dataset_path != '':
+                return np.load(dataset_path)
+            else:
+                return None
 
-    #     trX, trY = load_from_np(FLAGS.train_dataset), load_from_np(FLAGS.train_labels)
-    #     vlX, vlY = load_from_np(FLAGS.valid_dataset), load_from_np(FLAGS.valid_labels)
-    #     teX, teY = load_from_np(FLAGS.test_dataset), load_from_np(FLAGS.test_labels)
+        trX, trY = load_from_np(FLAGS.train_dataset), load_from_np(FLAGS.train_labels)
+        vlX, vlY = load_from_np(FLAGS.valid_dataset), load_from_np(FLAGS.valid_labels)
+        teX, teY = load_from_np(FLAGS.test_dataset), load_from_np(FLAGS.test_labels)
 
-    # else:
-    #     trX, trY, vlX, vlY, teX, teY = None, None, None, None, None, None
-    FLAGS.restore_previous_model = False
+    else:
+        trX, trY, vlX, vlY, teX, teY = None, None, None, None, None, None
 
-    mr = MomentumReader(test_precentage=0.3, validation_precentage=0.1, hot_vector=True)
-    trX, trY = mr.get_all_train_data()
-    vlX, vlY = mr.get_validation_data()
-    teX, teY = mr.get_test_data()
-
-
-    models_dir = os.path.abspath("./dbn/model")
-    data_dir = os.path.abspath("./dbn/data")
-    summary_dir = os.path.abspath("./dbn/summery")
+    models_dir = os.path.join(config.models_dir, FLAGS.main_dir)
+    data_dir = os.path.join(config.data_dir, FLAGS.main_dir)
+    summary_dir = os.path.join(config.summary_dir, FLAGS.main_dir)
 
     # Create the object
     finetune_act_func = utilities.str2actfunc(FLAGS.finetune_act_func)
@@ -147,30 +136,30 @@ if __name__ == '__main__':
     # Test the model
     print('Test set accuracy: {}'.format(srbm.compute_accuracy(teX, teY)))
 
-    # # Save the predictions of the model
-    # if FLAGS.save_predictions:
-    #     print('Saving the predictions for the test set...')
-    #     np.save(FLAGS.save_predictions, srbm.predict(teX))
+    # Save the predictions of the model
+    if FLAGS.save_predictions:
+        print('Saving the predictions for the test set...')
+        np.save(FLAGS.save_predictions, srbm.predict(teX))
 
 
-    # def save_layers_output(which_set):
-    #     if which_set == 'train':
-    #         trout = srbm.get_layers_output(trX)
-    #         for i, o in enumerate(trout):
-    #             np.save(FLAGS.save_layers_output_train + '-layer-' + str(i + 1) + '-train', o)
+    def save_layers_output(which_set):
+        if which_set == 'train':
+            trout = srbm.get_layers_output(trX)
+            for i, o in enumerate(trout):
+                np.save(FLAGS.save_layers_output_train + '-layer-' + str(i + 1) + '-train', o)
 
-    #     elif which_set == 'test':
-    #         teout = srbm.get_layers_output(teX)
-    #         for i, o in enumerate(teout):
-    #             np.save(FLAGS.save_layers_output_test + '-layer-' + str(i + 1) + '-test', o)
+        elif which_set == 'test':
+            teout = srbm.get_layers_output(teX)
+            for i, o in enumerate(teout):
+                np.save(FLAGS.save_layers_output_test + '-layer-' + str(i + 1) + '-test', o)
 
 
-    # # Save output from each layer of the model
-    # if FLAGS.save_layers_output_test:
-    #     print('Saving the output of each layer for the test set')
-    #     save_layers_output('test')
+    # Save output from each layer of the model
+    if FLAGS.save_layers_output_test:
+        print('Saving the output of each layer for the test set')
+        save_layers_output('test')
 
-    # # Save output from each layer of the model
-    # if FLAGS.save_layers_output_train:
-    #     print('Saving the output of each layer for the train set')
-    #     save_layers_output('train')
+    # Save output from each layer of the model
+    if FLAGS.save_layers_output_train:
+        print('Saving the output of each layer for the train set')
+        save_layers_output('train')

@@ -1,0 +1,2 @@
+model_checkpoint_path: "/home/zeng/deepnn/model/dbn/model/dbn"
+all_model_checkpoint_paths: "/home/zeng/deepnn/model/dbn/model/dbn"
