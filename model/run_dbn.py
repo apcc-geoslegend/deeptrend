@@ -136,8 +136,8 @@ if __name__ == '__main__':
         amrs.append(acc_return)
         print("Accumulated return at month %d is % 3.3f%%"%(date, acc_return))
 
-    total_time_used = time.time() - start_time
-    print("toltal time used: %f mins"%total_time_used/60)
+    total_time_used = (time.time() - start_time)/60
+    print("toltal time used: %f mins"%total_time_used)
     # result = {}
     # result["Total Time"] = total_time_used
     # result["Accuracy"] = output_accuracy
