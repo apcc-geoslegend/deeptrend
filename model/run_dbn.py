@@ -90,8 +90,10 @@ if __name__ == '__main__':
     FLAGS.restore_previous_model = False
     FLAGS.finetune_num_epochs = 1000
     FLAGS.finetune_batch_size = 1000
-    FLAGS.rbm_num_epochs = '1000,'
+    FLAGS.rbm_num_epochs = '800,100,'
     FLAGS.rbm_batch_size = '500,'
+    FLAGS.finetune_learning_rate = 0.001
+
 
     mr = MomentumReader(classification=True, test_precentage=0.3, validation_precentage=0.1, hot_vector=True)
     trX, trY = mr.get_all_train_data()
@@ -136,8 +138,8 @@ if __name__ == '__main__':
         amrs.append(acc_return)
         print("Accumulated return at month %d is % 3.3f%%"%(date, acc_return))
 
-    total_time_used = time.time() - start_time
-    print("toltal time used: %f mins"%total_time_used/60)
+    total_time_used = (time.time() - start_time)/60
+    print("toltal time used: %f mins"%(total_time_used))
     # result = {}
     # result["Total Time"] = total_time_used
     # result["Accuracy"] = output_accuracy

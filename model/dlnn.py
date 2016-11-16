@@ -11,13 +11,9 @@ import tensorflow as tf
 import numpy
 import time
 import datetime
-
 import dlnn_util
 
-## TODO:
-## Better to have a param supper class, but we can do it later
-
-class DeepLinearNN(object):
+class DeepLinearNN():
   def __init__(self):
     self.run_params = []
 
