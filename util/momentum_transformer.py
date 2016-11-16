@@ -88,7 +88,6 @@ def cal_amr(db, idb, month_range):
     
     @return     the output database
     """
-
     print("Calculating Monthly Database")
     start_time = time.time()
     mdb = get_monthly_database(db)
@@ -309,6 +308,10 @@ def idb_to_odb(idb, z_score=False):
                                     "NMR": nmr,
                                     "NNMR": nnmrs[m]
                                     }})
+    # final filter if the output database doesn't have more than 100 stocks
+    for date in odb:
+        if len(odb[date].items())<100:
+            odb.pop[date]
     print("Toltal Data Point is %d, Total valid stocks is around %d"%(count, int(count/len(all_month_dates))))
     return odb
 
