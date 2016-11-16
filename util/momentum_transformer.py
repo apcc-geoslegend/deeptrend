@@ -178,6 +178,7 @@ def cal_adr(db, idb, day_range):
         for month in idb[stock]:
             data = db.get_last_N_days_data(stock, month, day_range+1)
             if data is None:
+                idb[stock].pop(month)
                 continue
             if (len(data) < day_range + 1):
                 print("THIS SHOULD NOT HAPPEN: Not enough day for this stock", stock, month, len(data))
