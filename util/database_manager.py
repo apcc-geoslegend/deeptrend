@@ -96,7 +96,7 @@ class DatabaseManager:
 
         id = values.keys().index(date)
         if (id - N)<0: # not enough data
-            print("Not enough data in database")
+            print("Not enough data in database at date: %s stock: %s"%(str(date),stock))
             return None
 
         all_datas = values.items()[id-N+1:id+1]

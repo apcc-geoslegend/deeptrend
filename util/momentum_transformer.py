@@ -196,7 +196,7 @@ def cal_adr(db, idb, day_range):
                 adr.append(dr)
             if len(adr) != day_range:
                 print("ADR length not match Should not happen")
-                idb[stock][month] = {}
+                idb[stock].pop(month)
             idb[stock][month].update({"ADR":adr})
     print("ADR tiem used:", time.time() - start_time)
     return idb
