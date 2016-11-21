@@ -1,1 +1,1 @@
-A Private Repository for Deep Neural Network Prototype
+A Prototype Using Deep Neural Network for Trend Pridiction.
